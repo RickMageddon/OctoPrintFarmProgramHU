@@ -1,0 +1,339 @@
+const axios = require('axios');
+
+class OctoPrintService {
+    constructor() {
+        this.printers = [
+            {
+                id: 1,
+                name: 'Prusa Printer 1',
+                url: process.env.OCTOPRINT1_URL || 'http://localhost:5001',
+                apiKey: process.env.OCTOPRINT1_API_KEY
+            },
+            {
+                id: 2,
+                name: 'Prusa Printer 2', 
+                url: process.env.OCTOPRINT2_URL || 'http://localhost:5002',
+                apiKey: process.env.OCTOPRINT2_API_KEY
+            },
+            {
+                id: 3,
+                name: 'Prusa Printer 3',
+                url: process.env.OCTOPRINT3_URL || 'http://localhost:5003',
+                apiKey: process.env.OCTOPRINT3_API_KEY
+            }
+        ];
+    }
+
+    // Get printer configuration by ID
+    getPrinter(printerId) {
+        return this.printers.find(p => p.id === printerId);
+    }
+
+    // Create HTTP client for OctoPrint API
+    createClient(printer) {
+        if (!printer.apiKey) {
+            throw new Error(`API key not configured for ${printer.name}`);
+        }
+
+        return axios.create({
+            baseURL: printer.url,
+            headers: {
+                'X-Api-Key': printer.apiKey,
+                'Content-Type': 'application/json'
+            },
+            timeout: 10000
+        });
+    }
+
+    // Get printer status
+    async getPrinterStatus(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            // Get printer state
+            const stateResponse = await client.get('/api/printer');
+            const jobResponse = await client.get('/api/job');
+            
+            return {
+                id: printerId,
+                name: printer.name,
+                state: stateResponse.data.state,
+                job: jobResponse.data,
+                temperature: stateResponse.data.temperature,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error(`Error getting status for printer ${printerId}:`, error.message);
+            return {
+                id: printerId,
+                name: this.getPrinter(printerId)?.name || `Printer ${printerId}`,
+                state: { text: 'Offline' },
+                job: null,
+                temperature: null,
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    // Get all printer statuses
+    async getAllPrinterStatus() {
+        const statuses = await Promise.all(
+            this.printers.map(printer => this.getPrinterStatus(printer.id))
+        );
+        return statuses;
+    }
+
+    // Upload file to printer
+    async uploadFile(printerId, filePath, filename) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            const fs = require('fs');
+            const FormData = require('form-data');
+            
+            const form = new FormData();
+            form.append('file', fs.createReadStream(filePath), filename);
+            form.append('select', 'false');
+            form.append('print', 'false');
+            
+            const response = await client.post('/api/files/local', form, {
+                headers: {
+                    ...form.getHeaders(),
+                    'X-Api-Key': printer.apiKey
+                }
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error(`Error uploading file to printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Start print job
+    async startPrint(printerId, filename) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            // Select and start print
+            await client.post(`/api/files/local/${filename}`, {
+                command: 'select',
+                print: true
+            });
+
+            return { success: true, message: `Print started on ${printer.name}` };
+        } catch (error) {
+            console.error(`Error starting print on printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Cancel current print
+    async cancelPrint(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            await client.post('/api/job', {
+                command: 'cancel'
+            });
+
+            return { success: true, message: `Print cancelled on ${printer.name}` };
+        } catch (error) {
+            console.error(`Error cancelling print on printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Pause current print
+    async pausePrint(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            await client.post('/api/job', {
+                command: 'pause',
+                action: 'pause'
+            });
+
+            return { success: true, message: `Print paused on ${printer.name}` };
+        } catch (error) {
+            console.error(`Error pausing print on printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Resume current print
+    async resumePrint(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            await client.post('/api/job', {
+                command: 'pause',
+                action: 'resume'
+            });
+
+            return { success: true, message: `Print resumed on ${printer.name}` };
+        } catch (error) {
+            console.error(`Error resuming print on printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Get files on printer
+    async getFiles(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            const response = await client.get('/api/files');
+            
+            return response.data;
+        } catch (error) {
+            console.error(`Error getting files from printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Delete file from printer
+    async deleteFile(printerId, filename) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            await client.delete(`/api/files/local/${filename}`);
+            
+            return { success: true, message: `File ${filename} deleted from ${printer.name}` };
+        } catch (error) {
+            console.error(`Error deleting file from printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Update printer status in database
+    async updateAllPrinterStatus() {
+        try {
+            const Database = require('../database');
+            const db = new Database();
+            
+            for (const printer of this.printers) {
+                const status = await this.getPrinterStatus(printer.id);
+                
+                await db.run(
+                    `UPDATE printer_status SET 
+                     status = ?, 
+                     last_update = CURRENT_TIMESTAMP 
+                     WHERE id = ?`,
+                    [status.state?.text || 'Unknown', printer.id]
+                );
+            }
+        } catch (error) {
+            console.error('Error updating printer status in database:', error);
+        }
+    }
+
+    // Process print queue
+    async processQueue() {
+        try {
+            const Database = require('../database');
+            const db = new Database();
+            
+            // Get next queued job
+            const queuedJob = await db.get(
+                `SELECT pq.*, u.username 
+                 FROM print_queue pq 
+                 JOIN users u ON pq.user_id = u.id 
+                 WHERE pq.status = 'queued' 
+                 ORDER BY pq.priority DESC, pq.created_at ASC 
+                 LIMIT 1`
+            );
+
+            if (!queuedJob) {
+                return; // No jobs in queue
+            }
+
+            // Check if printer is available
+            const printerStatus = await this.getPrinterStatus(queuedJob.printer_id);
+            
+            if (printerStatus.state?.text === 'Operational' && !printerStatus.job?.job?.file?.name) {
+                // Printer is available, start the job
+                try {
+                    await this.uploadFile(
+                        queuedJob.printer_id, 
+                        queuedJob.file_path, 
+                        queuedJob.filename
+                    );
+                    
+                    await this.startPrint(queuedJob.printer_id, queuedJob.filename);
+                    
+                    // Update job status
+                    await db.run(
+                        `UPDATE print_queue SET 
+                         status = 'printing', 
+                         started_at = CURRENT_TIMESTAMP 
+                         WHERE id = ?`,
+                        [queuedJob.id]
+                    );
+
+                    console.log(`Started print job ${queuedJob.id} on printer ${queuedJob.printer_id}`);
+                } catch (error) {
+                    // Mark job as failed
+                    await db.run(
+                        `UPDATE print_queue SET 
+                         status = 'failed' 
+                         WHERE id = ?`,
+                        [queuedJob.id]
+                    );
+                    
+                    console.error(`Failed to start print job ${queuedJob.id}:`, error);
+                }
+            }
+        } catch (error) {
+            console.error('Error processing queue:', error);
+        }
+    }
+
+    // Estimate print time based on file size (rough estimation)
+    estimatePrintTime(fileSize) {
+        // Very rough estimation: 1MB ≈ 60 minutes
+        // This should be replaced with actual G-code analysis
+        const baseSizeInMB = fileSize / (1024 * 1024);
+        return Math.round(baseSizeInMB * 60); // minutes
+    }
+}
+
+module.exports = OctoPrintService;

@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # OctoPrint Instance 1 - Prusa Printer 1
+  octoprint1:
+    image: octoprint/octoprint:latest
+    container_name: octoprint_prusa1
+    restart: unless-stopped
+    ports:
+      - "5001:80"
+    volumes:
+      - octoprint1_data:/octoprint
+      - ./uploads:/uploads
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"  # Adjust based on your USB connections
+    environment:
+      - ENABLE_MJPG_STREAMER=true
+      - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
+    networks:
+      - octoprint_network
+
+  # OctoPrint Instance 2 - Prusa Printer 2  
+  octoprint2:
+    image: octoprint/octoprint:latest
+    container_name: octoprint_prusa2
+    restart: unless-stopped
+    ports:
+      - "5002:80"
+    volumes:
+      - octoprint2_data:/octoprint
+      - ./uploads:/uploads
+    devices:
+      - "/dev/ttyUSB1:/dev/ttyUSB1"  # Adjust based on your USB connections
+    environment:
+      - ENABLE_MJPG_STREAMER=true
+      - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
+    networks:
+      - octoprint_network
+
+  # OctoPrint Instance 3 - Prusa Printer 3
+  octoprint3:
+    image: octoprint/octoprint:latest
+    container_name: octoprint_prusa3
+    restart: unless-stopped
+    ports:
+      - "5003:80"
+    volumes:
+      - octoprint3_data:/octoprint
+      - ./uploads:/uploads
+    devices:
+      - "/dev/ttyUSB2:/dev/ttyUSB2"  # Adjust based on your USB connections
+    environment:
+      - ENABLE_MJPG_STREAMER=true
+      - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
+    networks:
+      - octoprint_network
+
+  # Main Web Application Backend
+  backend:
+    build: ./backend
+    container_name: octoprint_farm_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./database:/app/database
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_PATH=/app/database/farm.db
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - GITHUB_ORG_NAME=${GITHUB_ORG_NAME}
+      - OCTOPRINT1_URL=http://octoprint1:80
+      - OCTOPRINT2_URL=http://octoprint2:80
+      - OCTOPRINT3_URL=http://octoprint3:80
+    depends_on:
+      - octoprint1
+      - octoprint2
+      - octoprint3
+    networks:
+      - octoprint_network
+
+  # Frontend Web Application
+  frontend:
+    build: ./frontend
+    container_name: octoprint_farm_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - octoprint_network
+
+volumes:
+  octoprint1_data:
+  octoprint2_data:
+  octoprint3_data:
+
+networks:
+  octoprint_network:
+    driver: bridge

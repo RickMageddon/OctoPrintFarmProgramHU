@@ -1,0 +1,36 @@
+{
+  "name": "octoprint-farm-backend",
+  "version": "1.0.0",
+  "description": "Backend API for OctoPrint Farm Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "setup-db": "node scripts/setup-database.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "passport": "^0.6.0",
+    "passport-github2": "^0.1.12",
+    "sqlite3": "^5.1.6",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "multer": "^1.4.5-lts.1",
+    "axios": "^1.5.0",
+    "socket.io": "^4.7.2",
+    "nodemailer": "^6.9.5",
+    "crypto": "^1.0.1",
+    "node-cron": "^3.0.2",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "joi": "^17.10.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["octoprint", "3d-printing", "farm", "management"],
+  "author": "HU OctoPrint Farm Team",
+  "license": "MIT"
+}
