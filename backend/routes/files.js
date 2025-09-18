@@ -9,7 +9,8 @@ const router = express.Router();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../../uploads');
+        // Ensure uploads go to the mounted volume at /app/uploads
+        const uploadDir = path.join(process.cwd(), 'uploads');
         try {
             await fs.mkdir(uploadDir, { recursive: true });
             cb(null, uploadDir);

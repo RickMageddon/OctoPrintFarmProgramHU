@@ -2,7 +2,7 @@ const Database = require('../database');
 const path = require('path');
 
 async function setupDatabase() {
-    console.log('🗄️  Setting up HU OctoPrint Farm Database...');
+    console.log('🗄️  Setting up Printmeister Database...');
     
     try {
         const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database/farm.db');

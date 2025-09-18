@@ -60,13 +60,14 @@ const Navbar = () => {
   return (
     <AppBar position="fixed" elevation={1}>
       <Toolbar>
+
         <Typography
           variant="h6"
           component="div"
           sx={{ cursor: 'pointer' }}
           onClick={() => navigate('/dashboard')}
         >
-          HU OctoPrint Farm
+          Printmeister
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', ml: 4 }}>

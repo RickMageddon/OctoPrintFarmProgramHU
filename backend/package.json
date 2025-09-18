@@ -31,6 +31,6 @@
     "nodemon": "^3.0.1"
   },
   "keywords": ["octoprint", "3d-printing", "farm", "management"],
-  "author": "HU OctoPrint Farm Team",
+  "author": "Rick van der Voort (Printmeister Team)",
   "license": "MIT"
 }

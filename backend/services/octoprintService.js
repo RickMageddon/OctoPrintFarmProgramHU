@@ -1,7 +1,8 @@
 const axios = require('axios');
 
 class OctoPrintService {
-    constructor() {
+    constructor(db = null) {
+        this.db = db;
         this.printers = [
             {
                 id: 1,
@@ -22,6 +23,10 @@ class OctoPrintService {
                 apiKey: process.env.OCTOPRINT3_API_KEY
             }
         ];
+    }
+
+    setDatabase(db) {
+        this.db = db;
     }
 
     // Get printer configuration by ID
@@ -247,13 +252,15 @@ class OctoPrintService {
     // Update printer status in database
     async updateAllPrinterStatus() {
         try {
-            const Database = require('../database');
-            const db = new Database();
+            if (!this.db) {
+                console.warn('OctoPrintService.updateAllPrinterStatus called without db');
+                return;
+            }
             
             for (const printer of this.printers) {
                 const status = await this.getPrinterStatus(printer.id);
                 
-                await db.run(
+                await this.db.run(
                     `UPDATE printer_status SET 
                      status = ?, 
                      last_update = CURRENT_TIMESTAMP 
@@ -269,11 +276,13 @@ class OctoPrintService {
     // Process print queue
     async processQueue() {
         try {
-            const Database = require('../database');
-            const db = new Database();
+            if (!this.db) {
+                console.warn('OctoPrintService.processQueue called without db');
+                return;
+            }
             
             // Get next queued job
-            const queuedJob = await db.get(
+            const queuedJob = await this.db.get(
                 `SELECT pq.*, u.username 
                  FROM print_queue pq 
                  JOIN users u ON pq.user_id = u.id 
@@ -301,7 +310,7 @@ class OctoPrintService {
                     await this.startPrint(queuedJob.printer_id, queuedJob.filename);
                     
                     // Update job status
-                    await db.run(
+                    await this.db.run(
                         `UPDATE print_queue SET 
                          status = 'printing', 
                          started_at = CURRENT_TIMESTAMP 
@@ -312,7 +321,7 @@ class OctoPrintService {
                     console.log(`Started print job ${queuedJob.id} on printer ${queuedJob.printer_id}`);
                 } catch (error) {
                     // Mark job as failed
-                    await db.run(
+                    await this.db.run(
                         `UPDATE print_queue SET 
                          status = 'failed' 
                          WHERE id = ?`,

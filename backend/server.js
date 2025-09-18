@@ -3,6 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
+const axios = require('axios');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -32,7 +33,7 @@ const PORT = process.env.PORT || 3001;
 
 // Initialize services
 const db = new Database(process.env.DATABASE_PATH);
-const octoprintService = new OctoPrintService();
+const octoprintService = new OctoPrintService(db);
 const emailService = new EmailService();
 
 // Security middleware
@@ -53,13 +54,17 @@ app.use(limiter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// If behind a proxy (nginx), trust it so secure cookies can work correctly
+app.set('trust proxy', 1);
+
 // Session configuration
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        // Use explicit override if provided, else default to production
+        secure: (process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : process.env.NODE_ENV === 'production'),
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -113,11 +118,19 @@ passport.use(new GitHubStrategy({
             );
         }
 
-        // Check if user is admin based on GitHub organization
-        const organizations = profile.organizations || [];
-        const isAdmin = organizations.some(org => 
-            org.login === process.env.GITHUB_ORG_NAME
-        );
+        // Check if user is admin based on GitHub organization via API (requires read:org)
+        let isAdmin = false;
+        const orgName = process.env.GITHUB_ORG_NAME;
+        if (orgName) {
+            try {
+                const orgsResp = await axios.get('https://api.github.com/user/orgs', {
+                    headers: { Authorization: `token ${accessToken}` }
+                });
+                isAdmin = orgsResp.data?.some(org => org.login?.toLowerCase() === orgName.toLowerCase());
+            } catch (orgErr) {
+                console.warn('Could not verify GitHub org membership:', orgErr?.response?.status || orgErr.message);
+            }
+        }
         
         if (isAdmin) {
             await db.run(
@@ -152,7 +165,7 @@ app.locals.emailService = emailService;
 app.locals.io = io;
 
 // Routes
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/printers', printerRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/queue', queueRoutes);

@@ -148,7 +148,7 @@ const DashboardPage = () => {
           Dashboard
         </Typography>
         <Typography variant="body1" color="text.secondary" mb={4}>
-          Welkom terug, {user.username}! Hier is een overzicht van de HU OctoPrint Farm.
+          Welkom terug, {user.username}! Hier is een overzicht van Printmeister.
         </Typography>
 
         {/* Printer Status */}

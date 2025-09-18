@@ -11,8 +11,8 @@ services:
     volumes:
       - octoprint1_data:/octoprint
       - ./uploads:/uploads
-    devices:
-      - "/dev/ttyUSB0:/dev/ttyUSB0"  # Adjust based on your USB connections
+    # devices:
+    #   - "/dev/ttyUSB0:/dev/ttyUSB0"  # Adjust based on your USB connections
     environment:
       - ENABLE_MJPG_STREAMER=true
       - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
@@ -29,8 +29,8 @@ services:
     volumes:
       - octoprint2_data:/octoprint
       - ./uploads:/uploads
-    devices:
-      - "/dev/ttyUSB1:/dev/ttyUSB1"  # Adjust based on your USB connections
+    # devices:
+    #   - "/dev/ttyUSB1:/dev/ttyUSB1"  # Adjust based on your USB connections
     environment:
       - ENABLE_MJPG_STREAMER=true
       - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
@@ -47,8 +47,8 @@ services:
     volumes:
       - octoprint3_data:/octoprint
       - ./uploads:/uploads
-    devices:
-      - "/dev/ttyUSB2:/dev/ttyUSB2"  # Adjust based on your USB connections
+    # devices:
+    #   - "/dev/ttyUSB2:/dev/ttyUSB2"  # Adjust based on your USB connections
     environment:
       - ENABLE_MJPG_STREAMER=true
       - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10

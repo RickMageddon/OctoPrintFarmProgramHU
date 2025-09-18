@@ -2,9 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+
+
+# Install dependencies and sqlite3 CLI as root
 COPY package*.json ./
-RUN npm ci --only=production
+RUN apk add --no-cache sqlite sqlite-libs && npm install --only=production
 
 # Copy source code
 COPY . .

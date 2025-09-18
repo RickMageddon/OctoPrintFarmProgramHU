@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printmeister</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 1rem;
+        }
+        
+        .header p {
+            font-size: 1.25rem;
+            color: #666;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: #1976d2;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .feature-card p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .login-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+        
+        .auth-container {
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background: #f5f5f5;
+            color: #666;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .tab-button:hover:not(.active) {
+            background: #e0e0e0;
+        }
+        
+        .login-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .login-card h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .login-card p {
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .form-group {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        
+        .email-input, .code-input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .email-input::placeholder, .code-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .code-input {
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: 0.5rem;
+        }
+        
+        .email-chip {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            margin: 1rem 0;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .primary-button, .secondary-button {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .primary-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .primary-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .secondary-button {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+        }
+        
+        .secondary-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .success-icon {
+            font-size: 4rem;
+            color: #4caf50;
+            margin-bottom: 1rem;
+        }
+        
+        .switch-text {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .switch-text a {
+            color: white;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        
+        .switch-text a:hover {
+            opacity: 0.8;
+        }
+        
+        .login-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .login-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .login-note {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .footer p {
+            margin-bottom: 0.5rem;
+        }
+        
+        .github-icon {
+            width: 20px;
+            height: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .login-card {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Printmeister</h1>
+            <p>Professioneel 3D print management voor Hogeschool Utrecht</p>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🖨️</div>
+                <h3>3 Prusa Printers</h3>
+                <p>Beheer alle 3 Prusa printers vanuit één interface</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⏱️</div>
+                <h3>Print Queue</h3>
+                <p>Intelligente wachtrij met prioriteiten en real-time status</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>HU Authenticatie</h3>
+                <p>Veilige inlog met GitHub OAuth en HU email verificatie</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Real-time Updates</h3>
+                <p>Live status updates van alle printers en print jobs</p>
+            </div>
+        </div>
+
+        <div class="login-section">
+            <div class="auth-container">
+                <div class="auth-tabs">
+                    <button class="tab-button active" onclick="showTab('login')">Inloggen</button>
+                    <button class="tab-button" onclick="showTab('register')">Registreren</button>
+                </div>
+
+                <!-- Login Tab -->
+                <div class="login-card" id="login-tab">
+                    <h2>Welkom terug</h2>
+                    <p>Log in met je GitHub account om toegang te krijgen tot Printmeister</p>
+                    
+                    <button class="login-button" onclick="alert('Demo versie - GitHub OAuth nog niet geconfigureerd. Zie README.md voor setup instructies.')">
+                        <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        Inloggen met GitHub
+                    </button>
+                    
+                    <div class="login-note">
+                        Je hebt een @hu.nl of @student.hu.nl email adres nodig
+                    </div>
+
+                    <div class="switch-text">
+                        Nog geen account? <a href="#" onclick="showTab('register')">Maak hier een account aan</a>
+                    </div>
+                </div>
+
+                <!-- Register Tab -->
+                <div class="login-card" id="register-tab" style="display: none;">
+                    <div class="register-step" id="step-1">
+                        <h2>Registreren</h2>
+                        <p>Voer je HU email adres in om te beginnen met registreren</p>
+                        
+                        <div class="form-group">
+                            <label for="hu-email">HU Email Adres</label>
+                            <input 
+                                type="email" 
+                                id="hu-email" 
+                                placeholder="naam@hu.nl of naam@student.hu.nl"
+                                class="email-input"
+                            />
+                        </div>
+
+                        <div class="button-group">
+                            <button class="secondary-button" onclick="showTab('login')">
+                                Terug naar inloggen
+                            </button>
+                            <button class="primary-button" onclick="sendVerificationCode()">
+                                Verstuur verificatiecode
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="register-step" id="step-2" style="display: none;">
+                        <h2>Email Verificatie</h2>
+                        <p>We hebben een verificatiecode gestuurd naar je email</p>
+                        
+                        <div class="email-chip">
+                            <span id="registered-email">naam@hu.nl</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="verification-code">Verificatiecode</label>
+                            <input 
+                                type="text" 
+                                id="verification-code" 
+                                placeholder="123456"
+                                class="code-input"
+                                maxlength="6"
+                            />
+                        </div>
+
+                        <div class="button-group">
+                            <button class="secondary-button" onclick="showRegisterStep(1)">
+                                Terug
+                            </button>
+                            <button class="primary-button" onclick="verifyCode()">
+                                Verifieer code
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="register-step" id="step-3" style="display: none;">
+                        <div class="success-icon">✓</div>
+                        <h2>Email geverifieerd!</h2>
+                        <p>Je kunt nu inloggen met je GitHub account. Zorg ervoor dat je GitHub account gekoppeld is aan hetzelfde email adres.</p>
+
+                        <button class="login-button" onclick="alert('Demo versie - GitHub OAuth nog niet geconfigureerd.')">
+                            <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            Inloggen met GitHub
+                        </button>
+
+                        <div class="switch-text">
+                            <a href="#" onclick="showTab('login')">Terug naar login pagina</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Deze applicatie is ontwikkeld door <a href="https://rickmageddon.com/" target="_blank" style="color: #1976d2; text-decoration: none;">Rick van der Voort</a> voor Hogeschool Utrecht</p>
+            <p>Voor support, neem contact op met <strong>Turing Lab</strong></p>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide tabs
+            if (tab === 'login') {
+                document.getElementById('login-tab').style.display = 'block';
+                document.getElementById('register-tab').style.display = 'none';
+            } else {
+                document.getElementById('login-tab').style.display = 'none';
+                document.getElementById('register-tab').style.display = 'block';
+                showRegisterStep(1);
+            }
+        }
+        
+        function showRegisterStep(step) {
+            document.querySelectorAll('.register-step').forEach(s => s.style.display = 'none');
+            document.getElementById('step-' + step).style.display = 'block';
+        }
+        
+        function sendVerificationCode() {
+            const email = document.getElementById('hu-email').value;
+            
+            if (!email) {
+                alert('Voer een email adres in');
+                return;
+            }
+            
+            if (!email.match(/@(student\.)?hu\.nl$/)) {
+                alert('Voer een geldig HU email adres in (@hu.nl of @student.hu.nl)');
+                return;
+            }
+            
+            // In demo mode, just proceed to step 2
+            document.getElementById('registered-email').textContent = email;
+            showRegisterStep(2);
+            
+            // In real app, this would make an API call:
+            // fetch('/api/auth/register', { method: 'POST', ... })
+        }
+        
+        function verifyCode() {
+            const code = document.getElementById('verification-code').value;
+            
+            if (!code || code.length !== 6) {
+                alert('Voer een geldige 6-cijferige verificatiecode in');
+                return;
+            }
+            
+            // In demo mode, just proceed to step 3
+            showRegisterStep(3);
+            
+            // In real app, this would verify the code:
+            // fetch('/api/auth/verify-registration', { method: 'POST', ... })
+        }
+        
+        // Auto-format verification code input
+        document.addEventListener('DOMContentLoaded', function() {
+            const codeInput = document.getElementById('verification-code');
+            if (codeInput) {
+                codeInput.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/\D/g, '').slice(0, 6);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

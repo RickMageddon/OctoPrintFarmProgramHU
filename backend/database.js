@@ -15,7 +15,13 @@ class Database {
                     reject(err);
                 } else {
                     console.log('Connected to SQLite database');
-                    this.initializeTables().then(resolve).catch(reject);
+                    // Ensure foreign keys are enforced in SQLite
+                    this.db.run('PRAGMA foreign_keys = ON;', (pragmaErr) => {
+                        if (pragmaErr) {
+                            console.error('Failed to enable foreign keys:', pragmaErr.message);
+                        }
+                        this.initializeTables().then(resolve).catch(reject);
+                    });
                 }
             });
         });
@@ -78,6 +84,16 @@ class Database {
                 url VARCHAR(255),
                 last_update DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (current_job_id) REFERENCES print_queue (id)
+            )`,
+
+            // Pending registrations table for email verification before GitHub OAuth
+            `CREATE TABLE IF NOT EXISTS pending_registrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                verification_code VARCHAR(10) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                verified BOOLEAN DEFAULT FALSE
             )`,
 
             // Session logs table for debugging

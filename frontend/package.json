@@ -1,7 +1,7 @@
 {
   "name": "octoprint-farm-frontend",
   "version": "1.0.0",
-  "description": "Frontend for HU OctoPrint Farm Management System",
+  "description": "Frontend for Printmeister Management System",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",

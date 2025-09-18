@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# HU OctoPrint Farm Setup Script
+# Printmeister Setup Script
 # This script helps with the initial setup of the OctoPrint Farm
 
 set -e
 
-echo "🚀 HU OctoPrint Farm Setup"
+echo "🚀 Printmeister Setup"
 echo "=========================="
 
 # Colors for output

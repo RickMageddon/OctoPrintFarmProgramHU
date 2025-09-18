@@ -1,4 +1,4 @@
-# HU OctoPrint Farm
+# Printmeister
 
 Een complete 3D print farm management systeem voor Hogeschool Utrecht, met 3 Prusa printers gecontroleerd via OctoPrint in Docker containers.
 
@@ -88,7 +88,7 @@ Update de device mappings in `docker-compose.yml` indien nodig.
 
 1. Ga naar [GitHub Developer Settings](https://github.com/settings/applications/new)
 2. Maak een nieuwe OAuth App:
-   - **Application name**: HU OctoPrint Farm
+   - **Application name**: Printmeister
    - **Homepage URL**: `http://your-pi-ip:3000`
    - **Authorization callback URL**: `http://your-pi-ip:3001/auth/github/callback`
 3. Kopieer Client ID en Client Secret naar `.env`

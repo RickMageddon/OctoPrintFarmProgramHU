@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 
 class EmailService {
     constructor() {
-        this.transporter = nodemailer.createTransporter({
+        this.transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com', // Change based on your email provider
             port: 587,
             secure: false,
@@ -18,14 +18,14 @@ class EmailService {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'HU OctoPrint Farm - Email Verificatie',
+                subject: 'Printmeister - Email Verificatie',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #2c3e50;">HU OctoPrint Farm - Email Verificatie</h2>
+                        <h2 style="color: #2c3e50;">Printmeister - Email Verificatie</h2>
                         
                         <p>Hallo <strong>${username}</strong>,</p>
                         
-                        <p>Bedankt voor het registreren bij de HU OctoPrint Farm. Om je account te activeren, 
+                        <p>Bedankt voor het registreren bij Printmeister. Om je account te activeren, 
                         hebben we een verificatiecode naar je HU email adres gestuurd.</p>
                         
                         <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: center;">
@@ -47,7 +47,7 @@ class EmailService {
                         <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
                         
                         <p style="color: #7f8c8d; font-size: 12px;">
-                            HU OctoPrint Farm<br>
+                            Printmeister<br>
                             Hogeschool Utrecht<br>
                             Dit is een automatisch gegenereerde email.
                         </p>
@@ -68,7 +68,7 @@ class EmailService {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'HU OctoPrint Farm - Print Voltooid',
+                subject: 'Printmeister - Print Voltooid',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #27ae60;">🎉 Print Voltooid!</h2>
@@ -91,7 +91,7 @@ class EmailService {
                         <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
                         
                         <p style="color: #7f8c8d; font-size: 12px;">
-                            HU OctoPrint Farm<br>
+                            Printmeister<br>
                             Hogeschool Utrecht
                         </p>
                     </div>
@@ -110,7 +110,7 @@ class EmailService {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'HU OctoPrint Farm - Print Mislukt',
+                subject: 'Printmeister - Print Mislukt',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #e74c3c;">⚠️ Print Mislukt</h2>
@@ -134,7 +134,7 @@ class EmailService {
                         <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
                         
                         <p style="color: #7f8c8d; font-size: 12px;">
-                            HU OctoPrint Farm<br>
+                            Printmeister<br>
                             Hogeschool Utrecht
                         </p>
                     </div>
