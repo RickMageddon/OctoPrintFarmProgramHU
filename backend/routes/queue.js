@@ -102,8 +102,20 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
             });
         }
 
+
         // Estimate print time
         const estimatedTime = octoprintService.estimatePrintTime(favorite.file_size);
+
+        // Check if print fits before 20:00
+        const now = new Date();
+        const shutdown = new Date(now);
+        shutdown.setHours(20, 0, 0, 0);
+        const minutesLeft = Math.floor((shutdown - now) / 60000);
+        if (estimatedTime > minutesLeft) {
+            return res.status(400).json({
+                error: `Deze printopdracht past niet binnen de resterende tijd tot 20:00. Nog ${minutesLeft} minuten over, print duurt ~${estimatedTime} minuten.`
+            });
+        }
 
         // Add to queue
         const result = await db.run(

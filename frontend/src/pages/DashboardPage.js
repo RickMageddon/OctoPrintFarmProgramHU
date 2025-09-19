@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Grid,
@@ -9,6 +9,7 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
+import { Alert, Button, TextField, Select, MenuItem, InputLabel, FormControl, Checkbox, FormControlLabel, Snackbar, Paper } from '@mui/material';
 import {
   Print,
   Queue,
@@ -29,6 +30,70 @@ const DashboardPage = () => {
   const [queueStats, setQueueStats] = useState({});
   const [userStats, setUserStats] = useState({});
   const [loading, setLoading] = useState(true);
+  // Upload/print form state
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [printer, setPrinter] = useState('auto');
+  const [priority, setPriority] = useState('normal');
+  const [filamentChange, setFilamentChange] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
+  const fileInputRef = useRef();
+  // Upload/print form handlers
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0] || null);
+    setSubmitError('');
+  };
+
+  const handleUploadClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleSubmitPrintJob = async (e) => {
+    e.preventDefault();
+    setSubmitError('');
+    setSubmitSuccess('');
+    if (!selectedFile) {
+      setSubmitError('Selecteer een G-code bestand.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('printer', printer);
+    formData.append('priority', priority);
+    formData.append('filamentChange', filamentChange);
+    formData.append('notes', notes);
+    try {
+      // 1. Upload file
+      const uploadRes = await axios.post('/api/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const fileId = uploadRes.data.fileId || uploadRes.data.id;
+      // 2. Voeg toe aan queue
+      const queueRes = await axios.post('/api/queue/add', {
+        fileId,
+        printer,
+        priority,
+        filamentChange,
+        notes,
+      });
+      setSubmitSuccess('Printopdracht succesvol toegevoegd aan de wachtrij!');
+      setShowUploadForm(false);
+      setSelectedFile(null);
+      setNotes('');
+      setFilamentChange(false);
+      setPriority('normal');
+      setPrinter('auto');
+      fetchDashboardData();
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.error) {
+        setSubmitError(err.response.data.error);
+      } else {
+        setSubmitError('Er is een fout opgetreden bij het toevoegen van de printopdracht.');
+      }
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -147,6 +212,82 @@ const DashboardPage = () => {
         <Typography variant="h4" gutterBottom>
           Dashboard
         </Typography>
+
+        {/* Upload/Print Form Section */}
+        <Paper elevation={3} sx={{ p: 3, mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+            <Box>
+              <Typography variant="h5" fontWeight={600}>Nieuw Printbestand Uploaden</Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>Upload je G-code bestand en configureer je printopdracht</Typography>
+            </Box>
+            <Button variant="contained" color="secondary" onClick={() => setShowUploadForm(v => !v)}>
+              {showUploadForm ? 'Sluiten' : 'Uploaden'}
+            </Button>
+          </Box>
+          {showUploadForm && (
+            <Box component="form" onSubmit={handleSubmitPrintJob} sx={{ mt: 2, background: 'white', color: 'black', borderRadius: 2, p: 3 }}>
+              {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
+              {submitSuccess && <Alert severity="success" sx={{ mb: 2 }}>{submitSuccess}</Alert>}
+              <Grid container spacing={3}>
+                {/* File upload */}
+                <Grid item xs={12} md={4}>
+                  <Typography variant="subtitle1" fontWeight={600} mb={1}>📁 Bestand Selecteren</Typography>
+                  <Button variant="outlined" fullWidth onClick={handleUploadClick} sx={{ mb: 1 }}>
+                    {selectedFile ? selectedFile.name : 'Kies G-code bestand'}
+                  </Button>
+                  <input type="file" accept=".gcode,.g" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
+                  {selectedFile && (
+                    <Typography variant="caption" color="text.secondary">{(selectedFile.size/1024/1024).toFixed(2)} MB</Typography>
+                  )}
+                </Grid>
+                {/* Print settings */}
+                <Grid item xs={12} md={4}>
+                  <Typography variant="subtitle1" fontWeight={600} mb={1}>🖨️ Printer Selectie</Typography>
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel id="printer-select-label">Printer</InputLabel>
+                    <Select labelId="printer-select-label" value={printer} label="Printer" onChange={e => setPrinter(e.target.value)}>
+                      <MenuItem value="auto">Automatisch toewijzen (aanbevolen)</MenuItem>
+                      {printerStatus.map(p => (
+                        <MenuItem key={p.id} value={p.id} disabled={p.state?.text !== 'Operational'}>
+                          {p.name} {p.state?.text !== 'Operational' ? `(${p.state?.text})` : ''}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Typography variant="subtitle1" fontWeight={600} mb={1}>📊 Prioriteit</Typography>
+                  <FormControl fullWidth>
+                    <InputLabel id="priority-select-label">Prioriteit</InputLabel>
+                    <Select labelId="priority-select-label" value={priority} label="Prioriteit" onChange={e => setPriority(e.target.value)}>
+                      <MenuItem value="normal">Normaal (standaard)</MenuItem>
+                      <MenuItem value="high">Hoog (spoed)</MenuItem>
+                      <MenuItem value="low">Laag (flexibel)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                {/* Filament & options */}
+                <Grid item xs={12} md={4}>
+                  <Typography variant="subtitle1" fontWeight={600} mb={1}>🎨 Filament & Opties</Typography>
+                  <FormControlLabel
+                    control={<Checkbox checked={filamentChange} onChange={e => setFilamentChange(e.target.checked)} />}
+                    label={<span>Filament wisselen vereist</span>}
+                  />
+                  <TextField
+                    label="Opmerkingen (optioneel)"
+                    multiline
+                    minRows={2}
+                    fullWidth
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    sx={{ mt: 2 }}
+                  />
+                  <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 3 }}>
+                    🚀 Printopdracht Toevoegen aan Wachtrij
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </Paper>
         <Typography variant="body1" color="text.secondary" mb={4}>
           Welkom terug, {user.username}! Hier is een overzicht van Printmeister.
         </Typography>

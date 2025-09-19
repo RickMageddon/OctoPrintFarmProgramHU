@@ -1,5 +1,9 @@
+import React from 'react';
+import { Container, Typography, Box, Grid, Card, CardContent, Paper, Divider, Button, Alert } from '@mui/material';
+import { motion } from 'framer-motion';
+import { GitHub, Email } from '@mui/icons-material';
 
-
+function LoginPage({ error, features = [], handleGitHubLogin = () => {}, handleRegister = () => {} }) {
   return (
     <Container maxWidth="lg" sx={{ py: 8 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -111,6 +115,6 @@
       </motion.div>
     </Container>
   );
-};
+}
 
 export default LoginPage;

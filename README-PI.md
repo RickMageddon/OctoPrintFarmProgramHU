@@ -1,3 +1,26 @@
+---
+
+## Sonoff 4CH Pro R3 automatisering (3D-printer stroom)
+
+Deze repository bevat een script (`sonoff_scheduler.py`) waarmee je via de GPIO UART van de Raspberry Pi de Sonoff 4CH Pro R3 automatisch aanstuurt.
+
+### Aansluitschema
+| Sonoff Pin | Pi Pin (GPIO) | Kleur   | Pi Pin Nummer |
+|------------|--------------|---------|--------------|
+| 3.3V       | 3.3V         | Rood    | 1            |
+| RX         | TXD (GPIO14) | Oranje  | 8            |
+| TX         | RXD (GPIO15) | Geel    | 10           |
+| GND        | GND          | Zwart   | 6            |
+
+### Installatie & gebruik
+1. Zet de seriële poort van de Pi aan:
+  - `sudo raspi-config` → Interface Options → Serial → login shell NO, serial port YES
+2. Installeer pyserial:
+  - `pip3 install pyserial`
+3. Start het script:
+  - `python3 sonoff_scheduler.py`
+
+De relais (R1, R2, R3) worden automatisch om 08:30 aangezet en om 20:00 uitgezet. Het script bevat ook een functie om te checken of een printopdracht past binnen de resterende tijd tot 20:00.
 # OctoPrintFarmProgramHU - Raspberry Pi Installatiehandleiding
 
 Deze handleiding beschrijft hoe je het volledige OctoPrintFarmProgramHU project installeert en draait op een nieuwe Raspberry Pi (Pi 4 aanbevolen, met minimaal 2GB RAM).
