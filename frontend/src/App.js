@@ -13,6 +13,7 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 // Pages
 import LoginPage from './pages/LoginPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
+import StudyDirectionSetup from './pages/StudyDirectionSetup';
 import DashboardPage from './pages/DashboardPage';
 import PrintersPage from './pages/PrintersPage';
 import FilesPage from './pages/FilesPage';
@@ -77,7 +78,7 @@ const socket = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001', 
   autoConnect: false,
 });
 
-function ProtectedRoute({ children, requireEmailVerified = true }) {
+function ProtectedRoute({ children, requireEmailVerified = true, requireStudyDirection = true }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -90,6 +91,10 @@ function ProtectedRoute({ children, requireEmailVerified = true }) {
 
   if (requireEmailVerified && !user.email_verified) {
     return <Navigate to="/verify-email" replace />;
+  }
+
+  if (requireStudyDirection && !user.study_direction) {
+    return <Navigate to="/setup/study-direction" replace />;
   }
 
   return children;
@@ -128,7 +133,11 @@ function AppContent() {
             element={
               user ? (
                 user.email_verified ? (
-                  <Navigate to="/dashboard" replace />
+                  user.study_direction ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/setup/study-direction" replace />
+                  )
                 ) : (
                   <Navigate to="/verify-email" replace />
                 )
@@ -138,14 +147,58 @@ function AppContent() {
             } 
           />
           
-          {/* Email verification route */}
+          {/* Registration route */}
+          <Route 
+            path="/register" 
+            element={
+              user ? (
+                user.email_verified ? (
+                  user.study_direction ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/setup/study-direction" replace />
+                  )
+                ) : (
+                  <Navigate to="/verify-email" replace />
+                )
+              ) : (
+                <EmailVerificationPage />
+              )
+            } 
+          />
+          
+          {/* Email verification route (kept for compatibility) */}
           <Route 
             path="/verify-email" 
             element={
               user && !user.email_verified ? (
                 <EmailVerificationPage />
               ) : user ? (
-                <Navigate to="/dashboard" replace />
+                user.study_direction ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <Navigate to="/setup/study-direction" replace />
+                )
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+
+          {/* Study direction setup route */}
+          <Route 
+            path="/setup/study-direction" 
+            element={
+              user ? (
+                user.email_verified ? (
+                  user.study_direction ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <StudyDirectionSetup />
+                  )
+                ) : (
+                  <Navigate to="/verify-email" replace />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -214,7 +267,13 @@ function AppContent() {
           <Route 
             path="/" 
             element={
-              <Navigate to={user ? "/dashboard" : "/login"} replace />
+              <Navigate to={
+                user ? (
+                  user.email_verified ? (
+                    user.study_direction ? "/dashboard" : "/setup/study-direction"
+                  ) : "/verify-email"
+                ) : "/login"
+              } replace />
             } 
           />
           
@@ -222,7 +281,13 @@ function AppContent() {
           <Route 
             path="*" 
             element={
-              <Navigate to={user ? "/dashboard" : "/login"} replace />
+              <Navigate to={
+                user ? (
+                  user.email_verified ? (
+                    user.study_direction ? "/dashboard" : "/setup/study-direction"
+                  ) : "/verify-email"
+                ) : "/login"
+              } replace />
             } 
           />
         </Routes>

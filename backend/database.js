@@ -29,19 +29,21 @@ class Database {
 
     async initializeTables() {
         const tables = [
-            // Users table
+            // Users table - Updated for new login flow
             `CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                github_id VARCHAR(50) UNIQUE NOT NULL,
-                username VARCHAR(100) NOT NULL,
-                email VARCHAR(255) NOT NULL,
-                hu_email VARCHAR(255),
+                username VARCHAR(100) UNIQUE NOT NULL, -- Generated from email prefix
+                email VARCHAR(255) UNIQUE NOT NULL, -- Primary HU email
                 email_verified BOOLEAN DEFAULT FALSE,
-                verification_token VARCHAR(255),
+                github_id VARCHAR(50) UNIQUE, -- Can be NULL until GitHub is linked
+                github_username VARCHAR(100), -- GitHub username for display
+                github_email VARCHAR(255), -- GitHub primary email
+                github_linked BOOLEAN DEFAULT FALSE,
+                study_direction VARCHAR(20), -- TI, CSC, SD, OPENICT, AI
                 is_admin BOOLEAN DEFAULT FALSE,
-                github_organizations TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                last_login DATETIME
+                last_login DATETIME,
+                first_login_completed BOOLEAN DEFAULT FALSE -- For study direction selection
             )`,
 
             // User favorites table (max 10 per user)
@@ -90,10 +92,12 @@ class Database {
             `CREATE TABLE IF NOT EXISTS pending_registrations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email VARCHAR(255) UNIQUE NOT NULL,
+                username VARCHAR(100) NOT NULL, -- Generated from email prefix
                 verification_code VARCHAR(10) NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 expires_at DATETIME NOT NULL,
-                verified BOOLEAN DEFAULT FALSE
+                verified BOOLEAN DEFAULT FALSE,
+                user_created BOOLEAN DEFAULT FALSE -- TRUE after user account is created
             )`,
 
             // Session logs table for debugging

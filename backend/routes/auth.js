@@ -48,11 +48,22 @@ router.post('/register', async (req, res) => {
         const { email } = value;
         const db = req.app.locals.db;
 
-        // Check if email is already registered or pending
-        const existingUser = await db.get('SELECT id FROM users WHERE hu_email = ?', [email]);
+        // Generate username from email prefix (e.g., rick.vandervoort@student.hu.nl → rick.vandervoort)
+        const username = email.split('@')[0];
+
+        // Check if email is already registered
+        const existingUser = await db.get('SELECT id FROM users WHERE email = ?', [email]);
         if (existingUser) {
             return res.status(409).json({ 
-                error: 'This HU email is already registered' 
+                error: 'This email is already registered' 
+            });
+        }
+
+        // Check if username is already taken
+        const existingUsername = await db.get('SELECT id FROM users WHERE username = ?', [username]);
+        if (existingUsername) {
+            return res.status(409).json({ 
+                error: 'Username already exists. Please contact support.' 
             });
         }
 
@@ -67,11 +78,11 @@ router.post('/register', async (req, res) => {
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
-        // Store pending registration
+        // Store pending registration with username
         await db.run(
-            `INSERT INTO pending_registrations (email, verification_code, expires_at) 
-             VALUES (?, ?, ?)`,
-            [email, verificationCode, expiresAt.toISOString()]
+            `INSERT INTO pending_registrations (email, username, verification_code, expires_at) 
+             VALUES (?, ?, ?, ?)`,
+            [email, username, verificationCode, expiresAt.toISOString()]
         );
 
         // Send verification email
@@ -79,7 +90,8 @@ router.post('/register', async (req, res) => {
 
         res.json({ 
             message: 'Verification code sent to your HU email address. Please check your inbox.',
-            email: email
+            email: email,
+            username: username
         });
     } catch (error) {
         console.error('Registration error:', error);
@@ -87,7 +99,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Verify registration code
+// Verify registration code and create user account
 router.post('/verify-registration', async (req, res) => {
     try {
         const { email, code } = req.body;
@@ -114,15 +126,33 @@ router.post('/verify-registration', async (req, res) => {
             return res.status(400).json({ error: 'Verification code has expired. Please register again.' });
         }
 
-        // Mark as verified
+        // Check if user account already created
+        if (pending.user_created) {
+            return res.json({ 
+                message: 'Email already verified. You can now log in with GitHub.',
+                verified: true,
+                username: pending.username
+            });
+        }
+
+        // Create user account
+        const result = await db.run(
+            `INSERT INTO users (username, email, email_verified) 
+             VALUES (?, ?, TRUE)`,
+            [pending.username, pending.email]
+        );
+
+        // Mark pending registration as completed
         await db.run(
-            'UPDATE pending_registrations SET verified = TRUE WHERE id = ?',
+            'UPDATE pending_registrations SET verified = TRUE, user_created = TRUE WHERE id = ?',
             [pending.id]
         );
 
         res.json({ 
-            message: 'Email verified successfully! You can now log in with GitHub.',
-            verified: true
+            message: 'Email verified successfully! Your account has been created. You can now log in with GitHub.',
+            verified: true,
+            username: pending.username,
+            userId: result.lastID
         });
     } catch (error) {
         console.error('Verification error:', error);
@@ -135,48 +165,93 @@ router.get('/github', passport.authenticate('github', {
     scope: ['user:email', 'read:org'] 
 }));
 
-// GitHub OAuth callback
+// GitHub OAuth callback - New flow: link GitHub to existing verified email account
 router.get('/github/callback', 
     passport.authenticate('github', { failureRedirect: '/login?error=oauth_failed' }),
     async (req, res) => {
         try {
             const db = req.app.locals.db;
             const frontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+            
+            const githubProfile = req.user;
+            const githubId = githubProfile.id;
+            const githubUsername = githubProfile.username;
+            const githubEmails = githubProfile.emails || [];
+            
+            // Check if this GitHub account is already linked to another user
+            const existingGithubUser = await db.get(
+                'SELECT * FROM users WHERE github_id = ?',
+                [githubId]
+            );
+            
+            if (existingGithubUser) {
+                // GitHub account is already linked, log them in
+                await db.run(
+                    'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+                    [existingGithubUser.id]
+                );
+                
+                // Check if this is their first completed login (for study direction selection)
+                if (!existingGithubUser.first_login_completed) {
+                    return res.redirect(`${frontend}/setup/study-direction?userId=${existingGithubUser.id}`);
+                }
+                
+                return res.redirect(`${frontend}/dashboard`);
+            }
 
-            // Check if user has a verified pre-registration
-            const githubEmails = req.user.emails || [];
-            let verifiedRegistration = null;
+            // Find HU email in GitHub emails and match with verified user account
+            let matchedUser = null;
+            let huEmail = null;
 
             for (const emailObj of githubEmails) {
                 const email = emailObj.value;
                 if (email.endsWith('@hu.nl') || email.endsWith('@student.hu.nl')) {
-                    verifiedRegistration = await db.get(
-                        'SELECT * FROM pending_registrations WHERE email = ? AND verified = TRUE',
+                    // Check if this HU email has a verified user account
+                    matchedUser = await db.get(
+                        'SELECT * FROM users WHERE email = ? AND email_verified = TRUE',
                         [email]
                     );
-                    if (verifiedRegistration) {
-                        // Update user with verified HU email
-                        await db.run(
-                            'UPDATE users SET hu_email = ?, email_verified = TRUE WHERE id = ?',
-                            [email, req.user.id]
-                        );
-                        
-                        // Clean up pending registration
-                        await db.run(
-                            'DELETE FROM pending_registrations WHERE id = ?',
-                            [verifiedRegistration.id]
-                        );
+                    if (matchedUser) {
+                        huEmail = email;
                         break;
                     }
                 }
             }
 
-            if (!verifiedRegistration) {
-                // User didn't pre-register with HU email
-                return res.redirect(`${frontend}/login?error=no_registration`);
+            if (!matchedUser) {
+                // No verified HU email found in GitHub account
+                return res.redirect(`${frontend}/login?error=no_verified_email`);
             }
 
-            // Successful authentication with verified HU email
+            if (matchedUser.github_linked) {
+                // This user account already has a GitHub account linked
+                return res.redirect(`${frontend}/login?error=github_already_linked`);
+            }
+
+            // Link GitHub account to the verified user account
+            await db.run(
+                `UPDATE users SET 
+                 github_id = ?, 
+                 github_username = ?, 
+                 github_email = ?, 
+                 github_linked = TRUE,
+                 last_login = CURRENT_TIMESTAMP 
+                 WHERE id = ?`,
+                [githubId, githubUsername, githubEmails.find(e => e.primary)?.value || githubEmails[0]?.value, matchedUser.id]
+            );
+
+            // Clean up any pending registrations for this email
+            await db.run(
+                'DELETE FROM pending_registrations WHERE email = ?',
+                [huEmail]
+            );
+
+            // Check if this is their first completed login (for study direction selection)
+            if (!matchedUser.first_login_completed) {
+                return res.redirect(`${frontend}/setup/study-direction?userId=${matchedUser.id}`);
+            }
+
+            // Successful GitHub linking and login
             res.redirect(`${frontend}/dashboard`);
         } catch (error) {
             console.error('OAuth callback error:', error);
@@ -301,13 +376,70 @@ router.post('/verify-code', requireAuth, async (req, res) => {
     }
 });
 
+// Set study direction on first login
+router.post('/setup/study-direction', async (req, res) => {
+    try {
+        const { userId, studyDirection } = req.body;
+        
+        if (!userId || !studyDirection) {
+            return res.status(400).json({ error: 'User ID and study direction are required' });
+        }
+
+        // Validate study direction
+        const validDirections = ['TI', 'CSC', 'SD', 'OPENICT', 'AI'];
+        if (!validDirections.includes(studyDirection)) {
+            return res.status(400).json({ 
+                error: 'Invalid study direction. Must be one of: TI, CSC, SD, OPENICT, AI' 
+            });
+        }
+
+        const db = req.app.locals.db;
+
+        // Update user with study direction and mark first login as completed
+        const result = await db.run(
+            `UPDATE users SET 
+             study_direction = ?, 
+             first_login_completed = TRUE 
+             WHERE id = ?`,
+            [studyDirection, userId]
+        );
+
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Log the study direction setup
+        await db.run(
+            `INSERT INTO session_logs (user_id, action, details, ip_address) 
+             VALUES (?, ?, ?, ?)`,
+            [
+                userId,
+                'study_direction_set',
+                `Study direction set to: ${studyDirection}`,
+                req.ip
+            ]
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'Study direction set successfully',
+            studyDirection: studyDirection
+        });
+
+    } catch (error) {
+        console.error('Study direction setup error:', error);
+        res.status(500).json({ error: 'Failed to set study direction' });
+    }
+});
+
 // Get current user info
 router.get('/user', requireAuth, async (req, res) => {
     try {
         const db = req.app.locals.db;
         const user = await db.get(
-            `SELECT id, github_id, username, email, hu_email, email_verified, 
-                    is_admin, created_at, last_login 
+            `SELECT id, username, email, email_verified, github_id, github_username, 
+                    github_linked, study_direction, is_admin, created_at, last_login,
+                    first_login_completed
              FROM users WHERE id = ?`,
             [req.user.id]
         );

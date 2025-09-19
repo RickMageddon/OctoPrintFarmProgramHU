@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printmeister - Live Monitoring Display</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Header - Scaled down 10% for perfect fit */
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            height: 70px;
+            box-sizing: border-box;
+        }
+
+        .logo {
+            font-size: 1.9rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .timestamp {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Main Grid - Adjusted back to compact size */
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: 1150px 560px;
+            height: 880px;
+            gap: 18px;
+            padding: 18px;
+            box-sizing: border-box;
+        }
+
+        /* Printers Section - Scaled down 10% */
+        .printers-section {
+            display: grid;
+            grid-template-rows: 50px 1fr;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            margin: 0;
+            line-height: 50px;
+        }
+
+        .printers-grid {
+            display: grid;
+            grid-template-rows: repeat(3, 260px);
+            gap: 12px;
+        }
+
+        .printer-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 14px;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 260px;
+            box-sizing: border-box;
+        }
+
+        .printer-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .printer-card.printing::before {
+            background: linear-gradient(90deg, #4caf50, #81c784);
+            animation: pulse 2s infinite;
+        }
+
+        .printer-card.available::before {
+            background: linear-gradient(90deg, #2196f3, #64b5f6);
+        }
+
+        .printer-card.offline::before {
+            background: linear-gradient(90deg, #f44336, #ef5350);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .printer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .printer-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .printer-status {
+            padding: 0.25rem 0.6rem;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-printing {
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-available {
+            background: rgba(33, 150, 243, 0.8);
+            color: white;
+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
+        }
+
+        .status-offline {
+            background: rgba(244, 67, 54, 0.8);
+            color: white;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+        }
+
+        .printer-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .detail-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 0.65rem;
+            opacity: 0.8;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        /* Progress Bar - Compact version */
+        .progress-container {
+            grid-column: span 2;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #81c784);
+            border-radius: 6px;
+            transition: width 1s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            line-height: 1.2;
+            margin-top: 0px;
+        }
+
+        /* Queue Section - Scaled down 10% */
+        .queue-section {
+            display: grid;
+            grid-template-rows: 50px 1fr;
+            gap: 12px;
+        }
+
+        .queue-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 14px;
+            padding: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            overflow-y: auto;
+            height: 800px;
+            box-sizing: border-box;
+        }
+
+        .queue-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid;
+            position: relative;
+            transition: transform 0.3s ease;
+            height: auto;
+            min-height: 70px;
+        }
+
+        .queue-item:hover {
+            transform: translateX(5px);
+        }
+
+        .queue-item.priority-high {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .queue-item.priority-normal {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+
+        .queue-item.priority-low {
+            border-left-color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .queue-position {
+            position: absolute;
+            top: -6px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.7rem;
+        }
+
+        .file-name {
+            font-size: 0.95rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .file-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            opacity: 0.9;
+        }
+
+        .meta-item {
+            font-size: 0.75rem;
+        }
+
+        /* Statistics Bar - Scaled down 10% */
+        .stats-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 10px 18px;
+            display: flex;
+            justify-content: space-around;
+            border-top: 2px solid rgba(255, 255, 255, 0.1);
+            height: 70px;
+            box-sizing: border-box;
+            align-items: center;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: bold;
+            display: block;
+            color: #4caf50;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        /* Auto-refresh indicator - Scaled down 10% */
+        .refresh-indicator {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            background: rgba(76, 175, 80, 0.8);
+            padding: 0.3rem 0.7rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            animation: fadeInOut 3s infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Remove responsive adjustments for fixed 1920x1080 */
+        @media (max-width: 1400px) {
+            /* Keep original layout for 1920x1080 */
+        }
+    </style>
+</head>
+<body>
+    <div class="refresh-indicator">🔄 Live Update</div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">🖨️ Printmeister - Live Monitor</div>
+        <div class="timestamp" id="timestamp"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="monitoring-grid">
+        <!-- Printers Section -->
+        <div class="printers-section">
+            <div class="section-title">3D Printer Status</div>
+            <div class="printers-grid">
+                <!-- Printer 1 -->
+                <div class="printer-card printing">
+                    <div class="printer-header">
+                        <div class="printer-name">Prusa MK3S+ #1</div>
+                        <div class="printer-status status-printing">Printing</div>
+                    </div>
+                    <div class="printer-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Hotend Temp</div>
+                            <div class="detail-value">215°C</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Bed Temp</div>
+                            <div class="detail-value">60°C</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Layer</div>
+                            <div class="detail-value" id="layer1">145/218</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Tijd Resterend</div>
+                            <div class="detail-value" id="time1">1u 23m</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress1" style="width: 67%;"></div>
+                            </div>
+                            <div class="progress-text" id="progressText1">67% - phone_case_v2.gcode</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Printer 2 -->
+                <div class="printer-card available">
+                    <div class="printer-header">
+                        <div class="printer-name">Prusa MK3S+ #2</div>
+                        <div class="printer-status status-available">Beschikbaar</div>
+                    </div>
+                    <div class="printer-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Hotend Temp</div>
+                            <div class="detail-value">25°C</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Bed Temp</div>
+                            <div class="detail-value">23°C</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">Idle</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Laatste Job</div>
+                            <div class="detail-value">2u geleden</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%;"></div>
+                            </div>
+                            <div class="progress-text">Klaar voor nieuwe printopdracht</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Printer 3 -->
+                <div class="printer-card offline">
+                    <div class="printer-header">
+                        <div class="printer-name">Prusa MK3S+ #3</div>
+                        <div class="printer-status status-offline">Onderhoud</div>
+                    </div>
+                    <div class="printer-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">Offline</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Onderhoud</div>
+                            <div class="detail-value">Extruder</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Gepland Online</div>
+                            <div class="detail-value">Morgen 9:00</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Technicus</div>
+                            <div class="detail-value">Jan D.</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%;"></div>
+                            </div>
+                            <div class="progress-text">Gepland onderhoud - extruder kalibratie</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Queue Section -->
+        <div class="queue-section">
+            <div class="section-title">Print Wachtrij (4 items)</div>
+            <div class="queue-container">
+                <div class="queue-item priority-high">
+                    <div class="queue-position">#1</div>
+                    <div class="file-name">prototype_bracket.gcode</div>
+                    <div class="file-meta">
+                        <div class="meta-item">👤 Jan Janssen (TI)</div>
+                        <div class="meta-item">⏱️ ~2u 15m</div>
+                        <div class="meta-item">🔥 Hoge Prioriteit</div>
+                        <div class="meta-item">🎯 Nu aan het printen</div>
+                    </div>
+                </div>
+
+                <div class="queue-item priority-normal">
+                    <div class="queue-position">#2</div>
+                    <div class="file-name">mini_figurine.gcode</div>
+                    <div class="file-meta">
+                        <div class="meta-item">👤 Sarah de Vries (AI)</div>
+                        <div class="meta-item">⏱️ ~45m</div>
+                        <div class="meta-item">📊 Normale Prioriteit</div>
+                        <div class="meta-item">⏳ Wacht op printer</div>
+                    </div>
+                </div>
+
+                <div class="queue-item priority-low">
+                    <div class="queue-position">#3</div>
+                    <div class="file-name">enclosure_box.gcode</div>
+                    <div class="file-meta">
+                        <div class="meta-item">👤 Mike Peters (SD)</div>
+                        <div class="meta-item">⏱️ ~3u 30m</div>
+                        <div class="meta-item">📉 Lage Prioriteit</div>
+                        <div class="meta-item">⏳ Wacht op printer</div>
+                    </div>
+                </div>
+
+                <div class="queue-item priority-normal">
+                    <div class="queue-position">#4</div>
+                    <div class="file-name">sensor_housing.gcode</div>
+                    <div class="file-meta">
+                        <div class="meta-item">👤 Lisa van Dijk (CSC)</div>
+                        <div class="meta-item">⏱️ ~1u 45m</div>
+                        <div class="meta-item">📊 Normale Prioriteit</div>
+                        <div class="meta-item">📅 Ingepland voor morgen</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-number" id="totalPrints">47</span>
+            <span class="stat-label">Prints deze maand</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">2/3</span>
+            <span class="stat-label">Actieve Printers</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="queueLength">4</span>
+            <span class="stat-label">Items in Wachtrij</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">98%</span>
+            <span class="stat-label">Succes Ratio</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">127u</span>
+            <span class="stat-label">Print Tijd deze maand</span>
+        </div>
+    </div>
+
+    <script>
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            document.getElementById('timestamp').textContent = 
+                now.toLocaleDateString('nl-NL', options);
+        }
+
+        // Simulate real-time printer progress
+        function updatePrinterProgress() {
+            const progress1 = document.getElementById('progress1');
+            const progressText1 = document.getElementById('progressText1');
+            const layer1 = document.getElementById('layer1');
+            const time1 = document.getElementById('time1');
+            
+            let currentProgress = parseInt(progress1.style.width);
+            let currentLayer = 145;
+            let totalLayers = 218;
+            
+            if (currentProgress < 100) {
+                // Simulate slow progress (about 1% every 30 seconds)
+                currentProgress += 0.1;
+                currentLayer = Math.floor((currentProgress / 100) * totalLayers);
+                
+                progress1.style.width = currentProgress.toFixed(1) + '%';
+                progressText1.textContent = Math.floor(currentProgress) + '% - phone_case_v2.gcode';
+                layer1.textContent = currentLayer + '/218';
+                
+                // Calculate remaining time
+                let remainingTime = Math.floor((100 - currentProgress) * 1.2); // minutes
+                let hours = Math.floor(remainingTime / 60);
+                let minutes = remainingTime % 60;
+                time1.textContent = hours + 'u ' + minutes + 'm';
+            }
+        }
+
+        // Simulate queue updates
+        function updateQueue() {
+            const queueLength = document.getElementById('queueLength');
+            const totalPrints = document.getElementById('totalPrints');
+            
+            // Occasionally update statistics
+            if (Math.random() < 0.1) {
+                let current = parseInt(totalPrints.textContent);
+                totalPrints.textContent = current + 1;
+            }
+        }
+
+        // Initialize
+        updateTimestamp();
+        
+        // Set intervals for real-time updates
+        setInterval(updateTimestamp, 1000); // Update every second
+        setInterval(updatePrinterProgress, 3000); // Update progress every 3 seconds
+        setInterval(updateQueue, 30000); // Update queue every 30 seconds
+
+        // Add some dynamic visual effects
+        setInterval(() => {
+            // Pulse the printing status
+            const printingCards = document.querySelectorAll('.printer-card.printing');
+            printingCards.forEach(card => {
+                card.style.boxShadow = '0 0 30px rgba(76, 175, 80, 0.6)';
+                setTimeout(() => {
+                    card.style.boxShadow = '0 0 20px rgba(76, 175, 80, 0.3)';
+                }, 1000);
+            });
+        }, 2000);
+
+        // Auto-refresh page every hour to ensure fresh data
+        setTimeout(() => {
+            location.reload();
+        }, 3600000);
+    </script>
+</body>
+</html>

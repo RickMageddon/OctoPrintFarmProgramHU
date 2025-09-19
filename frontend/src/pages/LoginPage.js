@@ -1,68 +1,8 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Container,
-  Paper,
-  Typography,
-  Button,
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Tabs,
-  Tab,
-} from '@mui/material';
-import {
-  GitHub,
-  Print,
-  CloudQueue,
-  Security,
-  Speed,
-} from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
-import RegisterForm from '../components/Auth/RegisterForm';
 
-const LoginPage = () => {
-  const { login } = useAuth();
-  const [tab, setTab] = useState(0); // 0 = Login, 1 = Register
-
-  const handleTabChange = (event, newValue) => {
-    setTab(newValue);
-  };
-
-  const switchToLogin = () => setTab(0);
-  const switchToRegister = () => setTab(1);
-
-  const features = [
-    {
-      icon: <Print />,
-      title: '3 Prusa Printers',
-      description: 'Beheer alle 3 Prusa printers vanuit één interface',
-    },
-    {
-      icon: <CloudQueue />,
-      title: 'Print Queue',
-      description: 'Intelligente wachtrij met prioriteiten en real-time status',
-    },
-    {
-      icon: <Security />,
-      title: 'HU Authenticatie',
-      description: 'Veilige inlog met GitHub OAuth en HU email verificatie',
-    },
-    {
-      icon: <Speed />,
-      title: 'Real-time Updates',
-      description: 'Live status updates van alle printers en print jobs',
-    },
-  ];
 
   return (
     <Container maxWidth="lg" sx={{ py: 8 }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Box textAlign="center" mb={6}>
           <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
             Printmeister
@@ -75,11 +15,7 @@ const LoginPage = () => {
         <Grid container spacing={4} mb={6}>
           {features.map((feature, index) => (
             <Grid item xs={12} sm={6} md={3} key={index}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}>
                 <Card sx={{ height: '100%', textAlign: 'center' }}>
                   <CardContent>
                     <Box color="primary.main" mb={2}>
@@ -99,99 +35,58 @@ const LoginPage = () => {
         </Grid>
 
         <Box display="flex" justifyContent="center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.5 }}>
             <Box sx={{ maxWidth: 500, width: '100%' }}>
-              <Paper elevation={8} sx={{ mb: 2 }}>
-                <Tabs
-                  value={tab}
-                  onChange={handleTabChange}
-                  variant="fullWidth"
+              {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+              <Paper elevation={8} sx={{ p: 6, textAlign: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+                <Typography variant="h4" gutterBottom>Welkom terug</Typography>
+                <Typography variant="body1" mb={4}>Log in met je GitHub account om toegang te krijgen tot Printmeister</Typography>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<GitHub />}
+                  onClick={handleGitHubLogin}
                   sx={{
-                    '& .MuiTab-root': {
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                    },
-                  }}
-                >
-                  <Tab label="Inloggen" />
-                  <Tab label="Registreren" />
-                </Tabs>
-              </Paper>
-
-              {tab === 0 ? (
-                <Paper
-                  elevation={8}
-                  sx={{
-                    p: 6,
-                    textAlign: 'center',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
                     color: 'white',
+                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.3)' },
+                    py: 1.5,
+                    px: 4,
                   }}
+                  fullWidth
                 >
-                  <Typography variant="h4" gutterBottom>
-                    Welkom terug
+                  Inloggen met GitHub
+                </Button>
+                <Box mt={3}>
+                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                    Je GitHub account moet gekoppeld zijn aan een @hu.nl of @student.hu.nl email
                   </Typography>
-                  <Typography variant="body1" mb={4}>
-                    Log in met je GitHub account om toegang te krijgen tot Printmeister
+                </Box>
+                <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+                <Box mt={3}>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 2 }}>
+                    Nog geen account?
                   </Typography>
-                  
                   <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<GitHub />}
-                    onClick={login}
+                    variant="outlined"
+                    startIcon={<Email />}
+                    onClick={handleRegister}
                     sx={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
                       color: 'white',
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
                       '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                        borderColor: 'white',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
                       },
-                      py: 1.5,
-                      px: 4,
                     }}
                     fullWidth
                   >
-                    Inloggen met GitHub
+                    Registreer met Email
                   </Button>
-                  
-                  <Box mt={3}>
-                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                      Je hebt een @hu.nl of @student.hu.nl email adres nodig
-                    </Typography>
-                  </Box>
-
-                  <Box mt={3}>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Nog geen account?{' '}
-                      <Button
-                        color="inherit"
-                        onClick={switchToRegister}
-                        sx={{ 
-                          textDecoration: 'underline',
-                          textTransform: 'none',
-                          p: 0,
-                          minWidth: 'auto',
-                          '&:hover': {
-                            backgroundColor: 'transparent',
-                            textDecoration: 'underline',
-                          },
-                        }}
-                      >
-                        Maak hier een account aan
-                      </Button>
-                    </Typography>
-                  </Box>
-                </Paper>
-              ) : (
-                <RegisterForm onSwitchToLogin={switchToLogin} />
-              )}
+                </Box>
+              </Paper>
             </Box>
           </motion.div>
         </Box>
@@ -199,20 +94,15 @@ const LoginPage = () => {
         <Box mt={8} textAlign="center">
           <Typography variant="body2" color="text.secondary">
             Deze applicatie is ontwikkeld door{' '}
-            <Typography 
-              component="a" 
-              href="https://rickmageddon.com/" 
-              target="_blank" 
+            <Typography
+              component="a"
+              href="https://rickmageddon.com/"
+              target="_blank"
               rel="noopener noreferrer"
-              sx={{ 
-                color: 'primary.main', 
-                textDecoration: 'none',
-                '&:hover': { textDecoration: 'underline' }
-              }}
+              sx={{ color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
             >
               Rick van der Voort
-            </Typography>
-            {' '}voor Hogeschool Utrecht
+            </Typography>{' '}voor Hogeschool Utrecht
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Voor support, neem contact op met <strong>Turing Lab</strong>

@@ -115,20 +115,15 @@ const Navbar = () => {
           </Button>
         )}
 
-        {/* User Menu */}
-        <IconButton
-          size="large"
-          edge="end"
-          aria-label="account of current user"
-          aria-controls="primary-search-account-menu"
-          aria-haspopup="true"
-          onClick={handleProfileMenuOpen}
-          color="inherit"
+        {/* User Info - Klikbaar naar profiel */}
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', ml: 2 }}
+          onClick={() => navigate('/profile')}
         >
           <Avatar sx={{ width: 32, height: 32 }}>
             {user?.username?.charAt(0).toUpperCase()}
           </Avatar>
-        </IconButton>
+        </Box>
 
         <Menu
           id="primary-search-account-menu"
@@ -145,9 +140,17 @@ const Navbar = () => {
           open={Boolean(anchorEl)}
           onClose={handleProfileMenuClose}
         >
-          <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
+          <MenuItem
+            onClick={() => {
+              handleProfileMenuClose();
+              setTimeout(() => navigate('/profile'), 0);
+            }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
             <AccountCircle sx={{ mr: 2 }} />
-            Profiel
+            <span style={{ cursor: 'pointer', fontWeight: 600 }}>
+              {user?.username || 'Profiel'}
+            </span>
           </MenuItem>
           <MenuItem onClick={handleLogout}>
             <Logout sx={{ mr: 2 }} />

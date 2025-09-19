@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printmeister Dashboard - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Status indicators */
+        .status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.online {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .status.printing {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.offline {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        /* Progress bars */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        /* Queue items */
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .queue-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-info h4 {
+            margin-bottom: 0.3rem;
+            color: #333;
+        }
+
+        .file-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        /* Study Direction Badge */
+        .study-badge {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Statistics */
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Upload Zone Styling */
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-zone:hover {
+            border-color: #5a6fd8;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone p {
+            margin: 0.5rem 0;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .upload-zone small {
+            color: #666;
+        }
+
+        .file-preview {
+            background: #e8f5e8;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .file-preview strong {
+            color: #2e7d32;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        /* Form Elements */
+        select, textarea, input[type="text"] {
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        select:focus, textarea:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Checkbox styling */
+        input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        /* Animation for form toggle */
+        #upload-form {
+            transition: all 0.3s ease;
+        }
+
+        /* Priority indicator colors */
+        .priority-high { color: #f44336; }
+        .priority-normal { color: #ff9800; }
+        .priority-low { color: #4caf50; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">🖨️ Printmeister</div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Dashboard</a></li>
+                <li><a href="#" onclick="showPage('printers')">Printers</a></li>
+                <li><a href="#" onclick="showPage('queue')">Wachtrij</a></li>
+                <li><a href="#" onclick="showPage('files')">Bestanden</a></li>
+                <li><a href="#" onclick="showPage('profile')">Profiel</a></li>
+            </ul>
+            <div class="user-info">
+                <span class="study-badge">CSC - Cyber Security & Cloud</span>
+                <div class="user-avatar">RV</div>
+                <span>Rick van der Voort</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+                <p>Overzicht van alle 3D printers en actieve printopdrachten</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Printer Status Cards -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #e8f5e8; color: #2e7d32;">🖨️</div>
+                        <div>
+                            <div class="card-title">Prusa MK3S+ #1</div>
+                            <div class="card-subtitle">Hoofdprinter</div>
+                        </div>
+                        <span class="status printing">Printing</span>
+                    </div>
+                    <p><strong>Huidige Job:</strong> phone_case_v2.gcode</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 67%;"></div>
+                    </div>
+                    <p>Voortgang: 67% - 1u 23m resterend</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #e8f5e8; color: #2e7d32;">🖨️</div>
+                        <div>
+                            <div class="card-title">Prusa MK3S+ #2</div>
+                            <div class="card-subtitle">Backup printer</div>
+                        </div>
+                        <span class="status online">Beschikbaar</span>
+                    </div>
+                    <p><strong>Status:</strong> Klaar voor nieuwe printopdracht</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <p>Laatste job: 2 uur geleden voltooid</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #ffebee; color: #d32f2f;">🖨️</div>
+                        <div>
+                            <div class="card-title">Prusa MK3S+ #3</div>
+                            <div class="card-subtitle">Reserve printer</div>
+                        </div>
+                        <span class="status offline">Onderhoud</span>
+                    </div>
+                    <p><strong>Status:</strong> Gepland onderhoud - extruder kalibratie</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <p>Verwacht online: Morgen 09:00</p>
+                </div>
+
+                <!-- Upload Section - Wide and prominent -->
+                <div class="card" style="grid-column: span 3; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #f3e5f5; color: #7b1fa2;">📤</div>
+                        <div>
+                            <div class="card-title">Nieuw Printbestand Uploaden</div>
+                            <div class="card-subtitle">Upload je G-code bestand en configureer je printopdracht</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="toggleUploadForm()">Uploaden</button>
+                    </div>
+                    
+                    <div id="upload-form" style="display: none; margin-top: 1rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem;">
+                            <!-- File Upload -->
+                            <div>
+                                <h4 style="margin-bottom: 1rem;">📁 Bestand Selecteren</h4>
+                                <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+                                    <div class="upload-icon">📤</div>
+                                    <p>Klik hier of sleep je G-code bestand</p>
+                                    <small>Ondersteunde formaten: .gcode, .g</small>
+                                    <input type="file" id="file-input" accept=".gcode,.g" style="display: none;" onchange="handleFileSelect(event)">
+                                </div>
+                                <div id="file-info" style="display: none; margin-top: 1rem;">
+                                    <div class="file-preview">
+                                        <strong id="file-name"></strong>
+                                        <span id="file-size"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Print Settings -->
+                            <div>
+                                <h4 style="margin-bottom: 1rem;">⚙️ Print Instellingen</h4>
+                                
+                                <div style="margin-bottom: 1rem;">
+                                    <label><strong>🖨️ Printer Selectie:</strong></label>
+                                    <select id="printer-select" style="width: 100%; padding: 0.5rem; margin-top: 0.3rem; border-radius: 5px; border: 1px solid #ddd;">
+                                        <option value="auto">Automatisch toewijzen (aanbevolen)</option>
+                                        <option value="printer1">Prusa MK3S+ #1 (momenteel printing)</option>
+                                        <option value="printer2">Prusa MK3S+ #2 (beschikbaar)</option>
+                                        <option value="printer3" disabled>Prusa MK3S+ #3 (onderhoud)</option>
+                                    </select>
+                                </div>
+                                
+                                <div style="margin-bottom: 1rem;">
+                                    <label><strong>📊 Prioriteit:</strong></label>
+                                    <select id="priority-select" style="width: 100%; padding: 0.5rem; margin-top: 0.3rem; border-radius: 5px; border: 1px solid #ddd;">
+                                        <option value="normal">Normaal (standaard)</option>
+                                        <option value="high">Hoog (voor deadlines)</option>
+                                        <option value="low">Laag (flexibele timing)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Filament & Submit -->
+                            <div>
+                                <h4 style="margin-bottom: 1rem;">🎨 Filament & Opties</h4>
+                                
+                                <div style="margin-bottom: 1rem;">
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="checkbox" id="filament-change" style="margin-right: 0.5rem;">
+                                        <strong>Filament wisselen vereist</strong>
+                                    </label>
+                                    <small style="color: #666; margin-top: 0.3rem; display: block;">
+                                        ⚠️ De printer zal vragen om het filament te wisselen vóór de print start.
+                                    </small>
+                                </div>
+                                
+                                <div style="margin-bottom: 1rem;">
+                                    <label><strong>📝 Opmerkingen (optioneel):</strong></label>
+                                    <textarea id="print-notes" placeholder="Bijv: Fragiele onderdelen, speciale instructies..." 
+                                              style="width: 100%; height: 80px; padding: 0.5rem; margin-top: 0.3rem; border-radius: 5px; border: 1px solid #ddd; resize: vertical;"></textarea>
+                                </div>
+                                
+                                <button class="btn btn-primary" onclick="submitPrintJob()" style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 1rem;">
+                                    🚀 Printopdracht Toevoegen aan Wachtrij
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Print Queue -->
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #e3f2fd; color: #1976d2;">📋</div>
+                        <div>
+                            <div class="card-title">Print Wachtrij</div>
+                            <div class="card-subtitle">4 items in wachtrij</div>
+                        </div>
+                        <button class="btn btn-primary" onclick="showPage('queue')">Beheer Wachtrij</button>
+                    </div>
+                    
+                    <div class="queue-item">
+                        <div class="file-info">
+                            <h4>prototype_bracket.gcode</h4>
+                            <p>Ingediend door: Jan Janssen (TI) • Prioriteit: Hoog • ~2u 15m</p>
+                        </div>
+                        <span class="status printing">In behandeling</span>
+                    </div>
+                    
+                    <div class="queue-item">
+                        <div class="file-info">
+                            <h4>mini_figurine.gcode</h4>
+                            <p>Ingediend door: Sarah de Vries (AI) • Prioriteit: Normaal • ~45m</p>
+                        </div>
+                        <span class="status online">In wachtrij</span>
+                    </div>
+                    
+                    <div class="queue-item">
+                        <div class="file-info">
+                            <h4>enclosure_box.gcode</h4>
+                            <p>Ingediend door: Mike Peters (SD) • Prioriteit: Laag • ~3u 30m</p>
+                        </div>
+                        <span class="status online">In wachtrij</span>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #f3e5f5; color: #7b1fa2;">📊</div>
+                        <div>
+                            <div class="card-title">Statistieken</div>
+                            <div class="card-subtitle">Deze maand</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center;">
+                        <div>
+                            <span class="stat-number">47</span>
+                            <span class="stat-label">Voltooide prints</span>
+                        </div>
+                        <div>
+                            <span class="stat-number">98%</span>
+                            <span class="stat-label">Succes ratio</span>
+                        </div>
+                        <div>
+                            <span class="stat-number">127u</span>
+                            <span class="stat-label">Print tijd</span>
+                        </div>
+                        <div>
+                            <span class="stat-number">2.1kg</span>
+                            <span class="stat-label">Filament gebruikt</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Printers Page -->
+        <div id="printers-page" style="display: none;">
+            <div class="page-header">
+                <h1>Printer Beheer</h1>
+                <p>Gedetailleerd overzicht en controle van alle 3D printers</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card" style="grid-column: span 3;">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #e8f5e8; color: #2e7d32;">🖨️</div>
+                        <div>
+                            <div class="card-title">Prusa MK3S+ #1 - Gedetailleerde Status</div>
+                            <div class="card-subtitle">IP: 192.168.1.101 • Firmware: 3.11.0</div>
+                        </div>
+                        <button class="btn btn-secondary">Camera Bekijken</button>
+                        <button class="btn btn-danger" style="margin-left: 0.5rem;">Stop Print</button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; margin-top: 1rem;">
+                        <div>
+                            <h4>Temperaturen</h4>
+                            <p>Hotend: 215°C / 215°C</p>
+                            <p>Bed: 60°C / 60°C</p>
+                            <p>Ambient: 22°C</p>
+                        </div>
+                        <div>
+                            <h4>Print Progress</h4>
+                            <p>Layer: 145 / 218</p>
+                            <p>Z-hoogte: 29.0mm</p>
+                            <p>Snelheid: 50mm/s</p>
+                        </div>
+                        <div>
+                            <h4>Filament</h4>
+                            <p>Type: PLA</p>
+                            <p>Kleur: Wit</p>
+                            <p>Resterend: ~85%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profile-page" style="display: none;">
+            <div class="page-header">
+                <h1>Mijn Profiel</h1>
+                <p>Account informatie en instellingen</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #e3f2fd; color: #1976d2;">👤</div>
+                        <div>
+                            <div class="card-title">Account Details</div>
+                        </div>
+                    </div>
+                    <p><strong>Naam:</strong> Rick van der Voort</p>
+                    <p><strong>Email:</strong> rick.vandervoort@student.hu.nl</p>
+                    <p><strong>Studierichting:</strong> Cyber Security & Cloud (CSC)</p>
+                    <p><strong>GitHub:</strong> @RickMageddon</p>
+                    <p><strong>Lid sinds:</strong> September 2025</p>
+                    <button class="btn btn-primary" style="margin-top: 1rem;">Instellingen Bewerken</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #f3e5f5; color: #7b1fa2;">📈</div>
+                        <div>
+                            <div class="card-title">Mijn Statistieken</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <span class="stat-number">12</span>
+                        <span class="stat-label">Prints deze maand</span>
+                        <br><br>
+                        <span class="stat-number">34u</span>
+                        <span class="stat-label">Totale print tijd</span>
+                        <br><br>
+                        <span class="stat-number">0.8kg</span>
+                        <span class="stat-label">Filament verbruikt</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Section - At the bottom -->
+            <div class="card" style="grid-column: span 2; margin-top: 2rem;">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #f3e5f5; color: #7b1fa2;">📤</div>
+                    <div>
+                        <div class="card-title">Nieuw Printbestand Uploaden</div>
+                        <div class="card-subtitle">Upload je G-code bestand en configureer je printopdracht</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="toggleUploadForm()">Uploaden</button>
+                </div>
+                
+                <div id="upload-form" style="display: none; margin-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <!-- File Upload -->
+                        <div>
+                            <h4 style="margin-bottom: 1rem;">📁 Bestand Selecteren</h4>
+                            <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+                                <div class="upload-icon">📤</div>
+                                <p>Klik hier of sleep je G-code bestand</p>
+                                <small>Ondersteunde formaten: .gcode, .g</small>
+                                <input type="file" id="file-input" accept=".gcode,.g" style="display: none;" onchange="handleFileSelect(event)">
+                            </div>
+                            <div id="file-info" style="display: none; margin-top: 1rem;">
+                                <div class="file-preview">
+                                    <strong id="file-name"></strong>
+                                    <span id="file-size"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Print Settings -->
+                        <div>
+                            <h4 style="margin-bottom: 1rem;">⚙️ Print Instellingen</h4>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label><strong>🖨️ Printer Selectie:</strong></label>
+                                <select id="printer-select" style="width: 100%; padding: 0.5rem; margin-top: 0.3rem; border-radius: 5px; border: 1px solid #ddd;">
+                                    <option value="auto">Automatisch toewijzen (aanbevolen)</option>
+                                    <option value="printer1">Prusa MK3S+ #1 (momenteel printing)</option>
+                                    <option value="printer2">Prusa MK3S+ #2 (beschikbaar)</option>
+                                    <option value="printer3" disabled>Prusa MK3S+ #3 (onderhoud)</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label><strong>📊 Prioriteit:</strong></label>
+                                <select id="priority-select" style="width: 100%; padding: 0.5rem; margin-top: 0.3rem; border-radius: 5px; border: 1px solid #ddd;">
+                                    <option value="normal">Normaal (standaard)</option>
+                                    <option value="high">Hoog (voor deadlines)</option>
+                                    <option value="low">Laag (flexibele timing)</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="filament-change" style="margin-right: 0.5rem;">
+                                    <strong>🎨 Filament wisselen vereist</strong>
+                                </label>
+                                <div id="filament-options" style="display: none; margin-top: 0.5rem; padding: 1rem; background: #f5f5f5; border-radius: 5px;">
+                                    <p><strong>Huidige filament:</strong> PLA Wit</p>
+                                    <label>Gewenst filament:</label>
+                                    <select style="width: 100%; padding: 0.3rem; margin-top: 0.3rem; border-radius: 3px; border: 1px solid #ddd;">
+                                        <option value="pla-black">PLA Zwart</option>
+                                        <option value="pla-red">PLA Rood</option>
+                                        <option value="pla-blue">PLA Blauw</option>
+                                        <option value="petg-clear">PETG Transparant</option>
+                                        <option value="abs-black">ABS Zwart</option>
+                                    </select>
+                                    <small style="color: #666; margin-top: 0.3rem; display: block;">
+                                        ⚠️ Filament wisselen kan extra tijd kosten (15-30 min)
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label><strong>📝 Opmerkingen (optioneel):</strong></label>
+                                <textarea id="print-notes" placeholder="Bijv: Fragiele onderdelen, speciale instructies..." 
+                                          style="width: 100%; height: 60px; padding: 0.5rem; margin-top: 0.3rem; border-radius: 5px; border: 1px solid #ddd; resize: vertical;"></textarea>
+                            </div>
+                            
+                            <button class="btn btn-primary" onclick="submitPrintJob()" style="width: 100%; margin-top: 1rem;">
+                                🚀 Printopdracht Toevoegen aan Wachtrij
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPage(page) {
+            // Hide all pages
+            document.querySelectorAll('[id$="-page"]').forEach(p => p.style.display = 'none');
+            
+            // Show selected page
+            document.getElementById(page + '-page').style.display = 'block';
+            
+            // Update navigation
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Simulate real-time updates
+        setInterval(() => {
+            const progressBars = document.querySelectorAll('.progress-fill');
+            progressBars.forEach(bar => {
+                if (bar.style.width === '67%') {
+                    const currentWidth = parseInt(bar.style.width);
+                    if (currentWidth < 100) {
+                        bar.style.width = (currentWidth + 1) + '%';
+                    }
+                }
+            });
+        }, 30000); // Update every 30 seconds
+
+        // Upload Form Functions
+        function toggleUploadForm() {
+            const form = document.getElementById('upload-form');
+            const button = event.target;
+            
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                button.textContent = 'Sluiten';
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-secondary');
+            } else {
+                form.style.display = 'none';
+                button.textContent = 'Uploaden';
+                button.classList.remove('btn-secondary');
+                button.classList.add('btn-primary');
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('file-info').style.display = 'block';
+                document.getElementById('file-name').textContent = file.name;
+                document.getElementById('file-size').textContent = `(${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                
+                // Change upload zone appearance
+                const uploadZone = document.querySelector('.upload-zone');
+                uploadZone.style.background = 'rgba(76, 175, 80, 0.1)';
+                uploadZone.style.borderColor = '#4caf50';
+                uploadZone.innerHTML = `
+                    <div class="upload-icon">✅</div>
+                    <p><strong>${file.name}</strong> geselecteerd</p>
+                    <small>Klik om ander bestand te kiezen</small>
+                `;
+            }
+        }
+
+        // Filament change checkbox toggle (niet meer nodig, menu is verwijderd)
+
+        function submitPrintJob() {
+            const fileInput = document.getElementById('file-input');
+            const printerSelect = document.getElementById('printer-select');
+            const prioritySelect = document.getElementById('priority-select');
+            const filamentChange = document.getElementById('filament-change');
+            const notes = document.getElementById('print-notes');
+            
+            if (!fileInput.files[0]) {
+                alert('⚠️ Selecteer eerst een bestand om te uploaden.');
+                return;
+            }
+            
+            // Simulate submission
+            const submitButton = event.target;
+            const originalText = submitButton.textContent;
+            
+            submitButton.textContent = '⏳ Bezig met uploaden...';
+            submitButton.disabled = true;
+            
+            setTimeout(() => {
+                submitButton.textContent = '✅ Toegevoegd aan wachtrij!';
+                submitButton.style.background = '#4caf50';
+                
+                // Show success message
+                alert(`🎉 Je printopdracht "${fileInput.files[0].name}" is succesvol toegevoegd aan de wachtrij!\n\n` +
+                      `📋 Details:\n` +
+                      `• Printer: ${printerSelect.options[printerSelect.selectedIndex].text}\n` +
+                      `• Prioriteit: ${prioritySelect.options[prioritySelect.selectedIndex].text}\n` +
+                      `• Filament wisselen: ${filamentChange.checked ? 'Ja' : 'Nee'}\n` +
+                      `${notes.value ? `• Opmerkingen: ${notes.value}` : ''}\n\n` +
+                      `📧 Je ontvangt een email wanneer je print gereed is.`);
+                
+                // Reset form after success
+                setTimeout(() => {
+                    toggleUploadForm();
+                    resetUploadForm();
+                }, 2000);
+            }, 2000);
+        }
+
+        function resetUploadForm() {
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-info').style.display = 'none';
+            document.getElementById('printer-select').value = 'auto';
+            document.getElementById('priority-select').value = 'normal';
+            document.getElementById('filament-change').checked = false;
+            document.getElementById('filament-options').style.display = 'none';
+            document.getElementById('print-notes').value = '';
+            
+            // Reset upload zone
+            const uploadZone = document.querySelector('.upload-zone');
+            uploadZone.style.background = 'rgba(102, 126, 234, 0.05)';
+            uploadZone.style.borderColor = '#667eea';
+            uploadZone.innerHTML = `
+                <div class="upload-icon">📤</div>
+                <p>Klik hier of sleep je G-code bestand</p>
+                <small>Ondersteunde formaten: .gcode, .g</small>
+                <input type="file" id="file-input" accept=".gcode,.g" style="display: none;" onchange="handleFileSelect(event)">
+            `;
+            
+            // Reset submit button
+            const submitButton = document.querySelector('#upload-form button');
+            submitButton.textContent = '🚀 Printopdracht Toevoegen aan Wachtrij';
+            submitButton.disabled = false;
+            submitButton.style.background = '#667eea';
+        }
+    </script>
+</body>
+</html>

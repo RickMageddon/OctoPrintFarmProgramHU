@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await axios.get('/auth/status');
+      const response = await axios.get('/api/auth/status');
       if (response.data.authenticated) {
         setUser(response.data.user);
       } else {
@@ -36,12 +36,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = () => {
-    window.location.href = '/auth/github';
+    window.location.href = '/api/auth/github';
   };
 
   const logout = async () => {
     try {
-      await axios.post('/auth/logout');
+      await axios.post('/api/auth/logout');
       setUser(null);
       window.location.href = '/login';
     } catch (error) {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const response = await axios.get('/auth/user');
+      const response = await axios.get('/api/auth/user');
       setUser(response.data);
     } catch (error) {
       console.error('Error refreshing user:', error);
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   const verifyEmail = async (email) => {
     try {
-      const response = await axios.post('/auth/verify-email', { email });
+      const response = await axios.post('/api/auth/register', { email });
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Failed to send verification email' };
@@ -69,13 +69,25 @@ export const AuthProvider = ({ children }) => {
 
   const verifyCode = async (token, code) => {
     try {
-      const response = await axios.post('/auth/verify-code', { token, code });
+      const response = await axios.post('/api/auth/verify-registration', { token, code });
       if (response.data.success) {
         await refreshUser();
       }
       return response.data;
     } catch (error) {
       throw error.response?.data || { error: 'Failed to verify code' };
+    }
+  };
+
+  const setStudyDirection = async (studyDirection) => {
+    try {
+      const response = await axios.post('/api/auth/study-direction', { studyDirection });
+      if (response.data.success) {
+        await refreshUser();
+      }
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to set study direction' };
     }
   };
 
@@ -91,6 +103,7 @@ export const AuthProvider = ({ children }) => {
     refreshUser,
     verifyEmail,
     verifyCode,
+    setStudyDirection,
   };
 
   return (

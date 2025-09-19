@@ -73,74 +73,23 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// GitHub OAuth Strategy
+// GitHub OAuth Strategy - New flow: GitHub info is stored temporarily, not for user creation
 passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: `/auth/github/callback`
+    callbackURL: `/api/auth/github/callback`
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        // Check if user exists
-        let user = await db.get(
-            'SELECT * FROM users WHERE github_id = ?',
-            [profile.id]
-        );
-
-        if (!user) {
-            // Create new user
-            const result = await db.run(
-                `INSERT INTO users (github_id, username, email, github_organizations) 
-                 VALUES (?, ?, ?, ?)`,
-                [
-                    profile.id,
-                    profile.username,
-                    profile.emails?.[0]?.value || '',
-                    JSON.stringify(profile.organizations || [])
-                ]
-            );
-            
-            user = await db.get('SELECT * FROM users WHERE id = ?', [result.id]);
-        } else {
-            // Update existing user
-            await db.run(
-                `UPDATE users SET 
-                 username = ?, 
-                 email = ?, 
-                 github_organizations = ?,
-                 last_login = CURRENT_TIMESTAMP 
-                 WHERE github_id = ?`,
-                [
-                    profile.username,
-                    profile.emails?.[0]?.value || '',
-                    JSON.stringify(profile.organizations || []),
-                    profile.id
-                ]
-            );
-        }
-
-        // Check if user is admin based on GitHub organization via API (requires read:org)
-        let isAdmin = false;
-        const orgName = process.env.GITHUB_ORG_NAME;
-        if (orgName) {
-            try {
-                const orgsResp = await axios.get('https://api.github.com/user/orgs', {
-                    headers: { Authorization: `token ${accessToken}` }
-                });
-                isAdmin = orgsResp.data?.some(org => org.login?.toLowerCase() === orgName.toLowerCase());
-            } catch (orgErr) {
-                console.warn('Could not verify GitHub org membership:', orgErr?.response?.status || orgErr.message);
-            }
-        }
-        
-        if (isAdmin) {
-            await db.run(
-                'UPDATE users SET is_admin = TRUE WHERE github_id = ?',
-                [profile.id]
-            );
-        }
-
-        return done(null, user);
+        // Store GitHub profile info temporarily for the callback route to handle
+        // The actual user linking is handled in the auth route
+        return done(null, {
+            id: profile.id,
+            username: profile.username,
+            emails: profile.emails || [],
+            accessToken: accessToken
+        });
     } catch (error) {
+        console.error('GitHub strategy error:', error);
         return done(error, null);
     }
 }));
