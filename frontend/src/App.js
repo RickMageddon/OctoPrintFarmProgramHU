@@ -115,7 +115,15 @@ function AdminRoute({ children }) {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, login } = useAuth();
+  
+  const handleGitHubLogin = () => {
+    login();
+  };
+
+  const handleRegister = () => {
+    window.location.href = '/register';
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -142,7 +150,10 @@ function AppContent() {
                   <Navigate to="/verify-email" replace />
                 )
               ) : (
-                <LoginPage />
+                <LoginPage 
+                  handleGitHubLogin={handleGitHubLogin}
+                  handleRegister={handleRegister}
+                />
               )
             } 
           />
