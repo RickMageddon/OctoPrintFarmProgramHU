@@ -17,7 +17,8 @@ export const AuthProvider = ({ children }) => {
 
   // Configure axios defaults
   axios.defaults.withCredentials = true;
-  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+  // In Docker gebruik relatieve URLs zodat nginx de requests kan proxyen
+  axios.defaults.baseURL = process.env.REACT_APP_BACKEND_URL || '';
 
   const checkAuthStatus = async () => {
     try {
