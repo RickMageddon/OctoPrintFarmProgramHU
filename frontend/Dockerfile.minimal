@@ -1,0 +1,28 @@
+# Minimal Dockerfile - copy only what's needed
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --only=production --silent --no-audit --no-fund
+
+# Copy only essential files
+COPY src/App.js ./src/
+COPY src/index.js ./src/
+COPY src/components/ ./src/components/
+COPY src/pages/ ./src/pages/
+COPY src/contexts/ ./src/contexts/
+COPY public/index.html ./public/
+
+# Build
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

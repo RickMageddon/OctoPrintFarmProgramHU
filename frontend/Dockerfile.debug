@@ -1,0 +1,29 @@
+# Debug Dockerfile - shows exactly where it hangs
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Step 1: Copy package files
+COPY package*.json ./
+RUN echo "=== PACKAGE FILES COPIED ==="
+
+# Step 2: Install dependencies  
+RUN npm install --only=production --silent --no-audit --no-fund
+RUN echo "=== NPM INSTALL COMPLETED ==="
+
+# Step 3: Copy source files (THIS IS LIKELY WHERE IT HANGS)
+COPY src/ ./src/
+RUN echo "=== SOURCE FILES COPIED ==="
+
+COPY public/ ./public/
+RUN echo "=== PUBLIC FILES COPIED ==="
+
+# Step 4: Build
+RUN npm run build
+RUN echo "=== BUILD COMPLETED ==="
+
+# Production stage
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
