@@ -120,11 +120,30 @@ function AppContent() {
   const [showDeviceFlow, setShowDeviceFlow] = useState(false);
   
   const handleGitHubLogin = () => {
-    setShowDeviceFlow(true);
+    // For existing users: direct OAuth login
+    window.location.href = '/api/auth/github';
   };
 
   const handleRegister = () => {
     window.location.href = '/register';
+  };
+
+  const getLoginError = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    
+    switch(error) {
+      case 'oauth_failed':
+        return 'GitHub authenticatie mislukt. Probeer het opnieuw.';
+      case 'no_verified_email':
+        return 'Geen geverifieerd HU email gevonden in je GitHub account. Registreer eerst met je HU email.';  
+      case 'github_already_linked':
+        return 'Dit GitHub account is al gekoppeld aan een ander gebruikersaccount.';
+      case 'server_error':
+        return 'Er is een serverfout opgetreden. Probeer het later opnieuw.';
+      default:
+        return null;
+    }
   };
 
   const handleDeviceFlowSuccess = (userData, redirectPath) => {
@@ -161,6 +180,7 @@ function AppContent() {
                 <LoginPage 
                   handleGitHubLogin={handleGitHubLogin}
                   handleRegister={handleRegister}
+                  error={getLoginError()}
                 />
               )
             } 

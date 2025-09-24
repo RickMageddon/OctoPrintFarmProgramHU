@@ -451,10 +451,13 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
     }
 }
 
-// Legacy OAuth redirect (keeping for backwards compatibility)
-router.get('/github', passport.authenticate('github', { 
-    scope: ['user:email', 'read:org'] 
-}));
+// GitHub OAuth login - Direct login for existing users
+router.get('/github', (req, res, next) => {
+    console.log('🚀 Starting GitHub OAuth login');
+    passport.authenticate('github', { 
+        scope: ['user:email', 'read:org'] 
+    })(req, res, next);
+});
 
 // GitHub OAuth callback - Legacy flow (keeping for backwards compatibility)
 router.get('/github/callback', 
@@ -476,11 +479,16 @@ router.get('/github/callback',
             );
             
             if (existingGithubUser) {
+                console.log('✅ GitHub account found, logging in user:', existingGithubUser.email);
+                
                 // GitHub account is already linked, log them in
                 await db.run(
                     'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
                     [existingGithubUser.id]
                 );
+                
+                // Store user in session for login
+                req.session.user = existingGithubUser;
                 
                 // Check if this is their first completed login (for study direction selection)
                 if (!existingGithubUser.first_login_completed) {
@@ -511,15 +519,18 @@ router.get('/github/callback',
 
             if (!matchedUser) {
                 // No verified HU email found in GitHub account
-                return res.redirect(`${frontend}/login?error=no_verified_email`);
+                console.log('❌ No verified HU email found in GitHub account');
+                return res.redirect(`${frontend}/register?error=no_verified_email&message=Geen geverifieerd HU email gevonden. Registreer eerst met je HU email.`);
             }
 
             if (matchedUser.github_linked) {
                 // This user account already has a GitHub account linked
+                console.log('❌ User account already has GitHub linked');
                 return res.redirect(`${frontend}/login?error=github_already_linked`);
             }
 
             // Link GitHub account to the verified user account
+            console.log('🔗 Linking GitHub account to user:', matchedUser.email);
             await db.run(
                 `UPDATE users SET 
                  github_id = ?, 
@@ -531,6 +542,12 @@ router.get('/github/callback',
                 [githubId, githubUsername, githubEmails.find(e => e.primary)?.value || githubEmails[0]?.value, matchedUser.id]
             );
 
+            // Get the updated user with the linked GitHub info
+            const updatedUser = await db.get('SELECT * FROM users WHERE id = ?', [matchedUser.id]);
+            
+            // Store user in session for login
+            req.session.user = updatedUser;
+
             // Clean up any pending registrations for this email
             await db.run(
                 'DELETE FROM pending_registrations WHERE email = ?',
@@ -538,8 +555,8 @@ router.get('/github/callback',
             );
 
             // Check if this is their first completed login (for study direction selection)
-            if (!matchedUser.first_login_completed) {
-                return res.redirect(`${frontend}/setup/study-direction?userId=${matchedUser.id}`);
+            if (!updatedUser.first_login_completed) {
+                return res.redirect(`${frontend}/setup/study-direction?userId=${updatedUser.id}`);
             }
 
             // Successful GitHub linking and login
