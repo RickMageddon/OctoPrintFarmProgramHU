@@ -67,10 +67,7 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
         });
       }, 1000);
 
-      // Auto-start polling after showing the code for 3 seconds
-      setTimeout(() => {
-        startPolling();
-      }, 3000);
+      // Don't auto-start polling - wait for user to click "Ik heb de code ingevoerd"
 
     } catch (err) {
       setError(err.message || 'Er is een fout opgetreden');
