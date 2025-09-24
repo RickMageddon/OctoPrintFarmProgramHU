@@ -18,6 +18,7 @@ import { Email, CheckCircle, GitHub } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import GitHubDeviceFlow from '../components/GitHubDeviceFlow';
 
 const EmailVerificationPage = () => {
   const { verifyEmail, verifyCode } = useAuth();
@@ -28,6 +29,7 @@ const EmailVerificationPage = () => {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDeviceFlow, setShowDeviceFlow] = useState(false);
 
   const steps = ['HU Email Invoeren', 'Verificatiecode Invoeren', 'GitHub Koppelen'];
 
@@ -111,8 +113,14 @@ const EmailVerificationPage = () => {
   };
 
   const handleGitHubLink = () => {
-    // Redirect to GitHub OAuth for linking
-    window.location.href = '/api/auth/github';
+    // Start Device Flow instead of redirect
+    setShowDeviceFlow(true);
+  };
+
+  const handleDeviceFlowSuccess = (userData, redirectPath) => {
+    // User successfully linked GitHub account
+    toast.success('GitHub account succesvol gekoppeld!');
+    navigate(redirectPath || '/dashboard');
   };
 
   const extractNameFromEmail = (emailAddress) => {
@@ -300,6 +308,13 @@ const EmailVerificationPage = () => {
             </motion.div>
           )}
         </Paper>
+
+        {/* GitHub Device Flow Dialog */}
+        <GitHubDeviceFlow
+          open={showDeviceFlow}
+          onClose={() => setShowDeviceFlow(false)}
+          onSuccess={handleDeviceFlowSuccess}
+        />
       </motion.div>
     </Container>
   );
