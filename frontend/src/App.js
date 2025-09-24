@@ -14,6 +14,7 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 import LoginPage from './pages/LoginPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
 import StudyDirectionSetup from './pages/StudyDirectionSetup';
+import GitHubDeviceFlow from './components/GitHubDeviceFlow';
 import DashboardPage from './pages/DashboardPage';
 import PrintersPage from './pages/PrintersPage';
 import FilesPage from './pages/FilesPage';
@@ -116,13 +117,20 @@ function AdminRoute({ children }) {
 
 function AppContent() {
   const { user, loading, login } = useAuth();
+  const [showDeviceFlow, setShowDeviceFlow] = useState(false);
   
   const handleGitHubLogin = () => {
-    login();
+    setShowDeviceFlow(true);
   };
 
   const handleRegister = () => {
     window.location.href = '/register';
+  };
+
+  const handleDeviceFlowSuccess = (userData, redirectPath) => {
+    // The AuthContext will automatically update the user state
+    // The user will be redirected by the route logic
+    window.location.href = redirectPath || '/dashboard';
   };
 
   if (loading) {
@@ -313,6 +321,13 @@ function AppContent() {
             color: '#fff',
           },
         }}
+      />
+      
+      {/* GitHub Device Flow Dialog */}
+      <GitHubDeviceFlow
+        open={showDeviceFlow}
+        onClose={() => setShowDeviceFlow(false)}
+        onSuccess={handleDeviceFlowSuccess}
       />
     </div>
   );

@@ -2,6 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const crypto = require('crypto');
 const Joi = require('joi');
+const axios = require('axios');
 
 const router = express.Router();
 
@@ -160,12 +161,252 @@ router.post('/verify-registration', async (req, res) => {
     }
 });
 
-// Start GitHub OAuth
+// GitHub Device Flow - Step 1: Get device code
+router.post('/github/device', async (req, res) => {
+    try {
+        const response = await axios.post('https://github.com/login/device/code', 
+            new URLSearchParams({
+                client_id: process.env.GITHUB_CLIENT_ID,
+                scope: 'user:email read:org'
+            }),
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
+
+        const data = response.data;
+        
+        if (data.error) {
+            return res.status(400).json({ error: data.error_description || 'Failed to get device code' });
+        }
+
+        // Store device_code in session for polling
+        req.session.device_code = data.device_code;
+        req.session.device_code_expires = Date.now() + (data.expires_in * 1000);
+
+        res.json({
+            user_code: data.user_code,
+            verification_uri: data.verification_uri,
+            expires_in: data.expires_in,
+            interval: data.interval || 5
+        });
+    } catch (error) {
+        console.error('Device flow initiation error:', error);
+        res.status(500).json({ error: 'Failed to initiate device flow' });
+    }
+});
+
+// GitHub Device Flow - Step 2: Poll for authorization
+router.post('/github/device/poll', async (req, res) => {
+    try {
+        const device_code = req.session.device_code;
+        const expires_at = req.session.device_code_expires;
+
+        if (!device_code) {
+            return res.status(400).json({ error: 'No device code found. Please restart the flow.' });
+        }
+
+        if (Date.now() > expires_at) {
+            delete req.session.device_code;
+            delete req.session.device_code_expires;
+            return res.status(400).json({ error: 'Device code expired. Please restart the flow.' });
+        }
+
+        const response = await axios.post('https://github.com/login/oauth/access_token',
+            new URLSearchParams({
+                client_id: process.env.GITHUB_CLIENT_ID,
+                device_code: device_code,
+                grant_type: 'urn:ietf:params:oauth:grant-type:device_code'
+            }),
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
+
+        const data = response.data;
+
+        if (data.error) {
+            if (data.error === 'authorization_pending') {
+                return res.json({ status: 'pending' });
+            } else if (data.error === 'slow_down') {
+                return res.json({ status: 'slow_down' });
+            } else if (data.error === 'expired_token') {
+                delete req.session.device_code;
+                delete req.session.device_code_expires;
+                return res.status(400).json({ error: 'Device code expired. Please restart the flow.' });
+            } else {
+                return res.status(400).json({ error: data.error_description || 'Authorization failed' });
+            }
+        }
+
+        // Success! We have an access token
+        const access_token = data.access_token;
+        
+        // Get user info from GitHub
+        const userResponse = await axios.get('https://api.github.com/user', {
+            headers: {
+                'Authorization': `token ${access_token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        const emailResponse = await axios.get('https://api.github.com/user/emails', {
+            headers: {
+                'Authorization': `token ${access_token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        const githubUser = userResponse.data;
+        const githubEmails = emailResponse.data;
+
+        // Process the GitHub authentication (same logic as callback)
+        await processGitHubAuth(req, res, githubUser, githubEmails);
+
+    } catch (error) {
+        console.error('Device flow polling error:', error);
+        res.status(500).json({ error: 'Failed to poll authorization status' });
+    }
+});
+
+// Helper function for GitHub authentication processing
+async function processGitHubAuth(req, res, githubUser, githubEmails) {
+    try {
+        const db = req.app.locals.db;
+        
+        const githubId = githubUser.id;
+        const githubUsername = githubUser.login;
+        
+        // Check if this GitHub account is already linked to another user
+        const existingGithubUser = await db.get(
+            'SELECT * FROM users WHERE github_id = ?',
+            [githubId]
+        );
+        
+        if (existingGithubUser) {
+            // GitHub account is already linked, log them in
+            await db.run(
+                'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+                [existingGithubUser.id]
+            );
+            
+            // Store user in session
+            req.session.user = existingGithubUser;
+            
+            // Clean up device flow session
+            delete req.session.device_code;
+            delete req.session.device_code_expires;
+            
+            // Check if this is their first completed login
+            const redirectPath = !existingGithubUser.first_login_completed 
+                ? `/setup/study-direction?userId=${existingGithubUser.id}`
+                : '/dashboard';
+            
+            return res.json({ 
+                status: 'success', 
+                user: existingGithubUser,
+                redirect: redirectPath
+            });
+        }
+
+        // Find HU email in GitHub emails and match with verified user account
+        let matchedUser = null;
+        let huEmail = null;
+
+        for (const emailObj of githubEmails) {
+            const email = emailObj.email;
+            if (email.endsWith('@hu.nl') || email.endsWith('@student.hu.nl')) {
+                // Check if this HU email has a verified user account
+                matchedUser = await db.get(
+                    'SELECT * FROM users WHERE email = ? AND email_verified = TRUE',
+                    [email]
+                );
+                if (matchedUser) {
+                    huEmail = email;
+                    break;
+                }
+            }
+        }
+
+        if (!matchedUser) {
+            // Clean up device flow session
+            delete req.session.device_code;
+            delete req.session.device_code_expires;
+            
+            return res.status(400).json({ 
+                error: 'no_verified_email',
+                message: 'No verified HU email found in your GitHub account. Please register first with your HU email.'
+            });
+        }
+
+        if (matchedUser.github_linked) {
+            // Clean up device flow session
+            delete req.session.device_code;
+            delete req.session.device_code_expires;
+            
+            return res.status(400).json({ 
+                error: 'github_already_linked',
+                message: 'This user account already has a GitHub account linked.'
+            });
+        }
+
+        // Link GitHub account to the verified user account
+        await db.run(
+            `UPDATE users SET 
+             github_id = ?, 
+             github_username = ?, 
+             github_email = ?, 
+             github_linked = TRUE,
+             last_login = CURRENT_TIMESTAMP 
+             WHERE id = ?`,
+            [githubId, githubUsername, githubEmails.find(e => e.primary)?.email || githubEmails[0]?.email, matchedUser.id]
+        );
+
+        // Get updated user
+        const updatedUser = await db.get('SELECT * FROM users WHERE id = ?', [matchedUser.id]);
+        
+        // Store user in session
+        req.session.user = updatedUser;
+
+        // Clean up any pending registrations for this email
+        await db.run(
+            'DELETE FROM pending_registrations WHERE email = ?',
+            [huEmail]
+        );
+
+        // Clean up device flow session
+        delete req.session.device_code;
+        delete req.session.device_code_expires;
+
+        // Check if this is their first completed login
+        const redirectPath = !matchedUser.first_login_completed 
+            ? `/setup/study-direction?userId=${matchedUser.id}`
+            : '/dashboard';
+
+        res.json({ 
+            status: 'success', 
+            user: updatedUser,
+            redirect: redirectPath
+        });
+
+    } catch (error) {
+        console.error('GitHub auth processing error:', error);
+        res.status(500).json({ error: 'Failed to process GitHub authentication' });
+    }
+}
+
+// Legacy OAuth redirect (keeping for backwards compatibility)
 router.get('/github', passport.authenticate('github', { 
     scope: ['user:email', 'read:org'] 
 }));
 
-// GitHub OAuth callback - New flow: link GitHub to existing verified email account
+// GitHub OAuth callback - Legacy flow (keeping for backwards compatibility)
 router.get('/github/callback', 
     passport.authenticate('github', { failureRedirect: '/login?error=oauth_failed' }),
     async (req, res) => {

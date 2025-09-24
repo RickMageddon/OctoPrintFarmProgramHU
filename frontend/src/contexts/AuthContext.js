@@ -40,6 +40,25 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/api/auth/github';
   };
 
+  // GitHub Device Flow methods
+  const startGitHubDeviceFlow = async () => {
+    try {
+      const response = await axios.post('/api/auth/github/device');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to start GitHub authentication' };
+    }
+  };
+
+  const pollGitHubDeviceFlow = async () => {
+    try {
+      const response = await axios.post('/api/auth/github/device/poll');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to check authentication status' };
+    }
+  };
+
   const logout = async () => {
     try {
       await axios.post('/api/auth/logout');
@@ -105,6 +124,8 @@ export const AuthProvider = ({ children }) => {
     verifyEmail,
     verifyCode,
     setStudyDirection,
+    startGitHubDeviceFlow,
+    pollGitHubDeviceFlow,
   };
 
   return (
