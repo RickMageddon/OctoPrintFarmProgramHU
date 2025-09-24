@@ -33,7 +33,7 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
   const steps = [
     'GitHub code aanvragen',
     'Code invoeren op GitHub',
-    'Wachten op autorisatie'
+    'Autorisatie succesvol!'
   ];
 
   const resetFlow = () => {
@@ -67,7 +67,10 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
         });
       }, 1000);
 
-      // Don't auto-start polling - wait for user to click "Ik heb de code ingevoerd"
+      // Auto-start polling after showing the code
+      setTimeout(() => {
+        startPolling();
+      }, 2000); // Give user 2 seconds to see the code first
 
     } catch (err) {
       setError(err.message || 'Er is een fout opgetreden');
@@ -79,10 +82,10 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
     if (polling) return;
     
     setPolling(true);
-    setStep(3);
+    setStep(2); // Stay on step 2 but show polling indicator
     
     const pollInterval = deviceData?.interval || 5;
-    console.log('Starting polling every', pollInterval, 'seconds');
+    console.log('🔄 Starting polling every', pollInterval, 'seconds');
     
     const poll = async () => {
       try {
@@ -93,13 +96,17 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
         if (result.status === 'success') {
           console.log('✅ GitHub authorization successful!');
           setPolling(false);
+          setStep(3); // Move to success step
           
           // Refresh the user state in AuthContext
           await refreshUser();
           
-          onSuccess(result.user, result.redirect);
-          onClose();
-          resetFlow();
+          // Show success message briefly before redirecting
+          setTimeout(() => {
+            onSuccess(result.user, result.redirect);
+            onClose();
+            resetFlow();
+          }, 1500);
           return;
         }
         
@@ -132,12 +139,11 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
         }
         
         setError(errorMessage);
-        setStep(2);
       }
     };
     
-    // Start first poll
-    setTimeout(poll, pollInterval * 1000);
+    // Start first poll immediately
+    poll();
   };
 
   const copyCode = async () => {
@@ -261,28 +267,39 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
                 )}
               </Box>
 
-              <Button
-                variant="outlined"
-                onClick={startPolling}
-                disabled={polling || !deviceData}
-              >
-                Ik heb de code ingevoerd
-              </Button>
+              {!polling && (
+                <Button
+                  variant="outlined"
+                  onClick={startPolling}
+                  disabled={!deviceData}
+                >
+                  Start wachten op autorisatie
+                </Button>
+              )}
+              
+              {polling && (
+                <Box display="flex" alignItems="center" gap={2} sx={{ mt: 2 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="body2" color="text.secondary">
+                    Wachten op autorisatie...
+                  </Typography>
+                </Box>
+              )}
             </StepContent>
           </Step>
 
           <Step>
-            <StepLabel>Wachten op autorisatie</StepLabel>
+            <StepLabel>Autorisatie succesvol!</StepLabel>
             <StepContent>
               <Box display="flex" alignItems="center" gap={2} sx={{ mb: 2 }}>
-                <CircularProgress size={20} />
-                <Typography variant="body2" color="text.secondary">
-                  Wachten op bevestiging van GitHub...
+                <CheckCircle color="success" />
+                <Typography variant="body2" color="success.main">
+                  GitHub account succesvol gekoppeld!
                 </Typography>
               </Box>
               
               <Typography variant="caption" color="text.secondary">
-                Dit gebeurt automatisch zodra je de app autoriseert op GitHub.
+                Je wordt automatisch doorgestuurd...
               </Typography>
             </StepContent>
           </Step>
