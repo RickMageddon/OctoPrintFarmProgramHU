@@ -43,12 +43,28 @@ const EmailVerificationPage = () => {
     setError('');
 
     try {
-      const response = await verifyEmail(email);
-      setToken(response.token);
+      // For new registration, call the register endpoint directly
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: email
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
       setStep(1);
       toast.success('Verificatiecode verzonden naar je email!');
     } catch (err) {
-      setError(err.error || 'Fout bij versturen verificatiecode');
+      setError(err.message || 'Fout bij versturen verificatiecode');
     } finally {
       setLoading(false);
     }
@@ -66,11 +82,29 @@ const EmailVerificationPage = () => {
     setError('');
 
     try {
-      await verifyCode(token, code);
+      // For new registration, call the verify-registration endpoint directly
+      const response = await fetch('/api/auth/verify-registration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: email,
+          code: code
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Verification failed');
+      }
+
       setStep(2);
       toast.success('Email succesvol geverifieerd!');
     } catch (err) {
-      setError(err.error || 'Ongeldige verificatiecode');
+      setError(err.message || 'Ongeldige verificatiecode');
     } finally {
       setLoading(false);
     }
