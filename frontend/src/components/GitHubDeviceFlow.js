@@ -82,6 +82,7 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
     setStep(3);
     
     const pollInterval = deviceData?.interval || 5;
+    console.log('Starting polling every', pollInterval, 'seconds');
     
     const poll = async () => {
       try {
@@ -97,9 +98,11 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
         
         if (result.status === 'pending') {
           // Continue polling
+          console.log('Still pending, polling again in', pollInterval, 'seconds');
           setTimeout(poll, pollInterval * 1000);
         } else if (result.status === 'slow_down') {
           // Slow down polling
+          console.log('Slowing down, polling again in', pollInterval + 5, 'seconds');
           setTimeout(poll, (pollInterval + 5) * 1000);
         }
         
