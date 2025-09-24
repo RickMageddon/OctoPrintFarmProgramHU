@@ -21,7 +21,7 @@ import { GitHub, ContentCopy, CheckCircle, OpenInNew } from '@mui/icons-material
 import { useAuth } from '../contexts/AuthContext';
 
 const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
-  const { startGitHubDeviceFlow, pollGitHubDeviceFlow, refreshUser } = useAuth();
+  const { startGitHubDeviceFlow, pollGitHubDeviceFlow } = useAuth();
   
   const [step, setStep] = useState(0);
   const [deviceData, setDeviceData] = useState(null);
@@ -86,17 +86,10 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
     
     const poll = async () => {
       try {
-        console.log('🔄 Polling GitHub authorization...');
         const result = await pollGitHubDeviceFlow();
-        console.log('Polling result:', result);
         
         if (result.status === 'success') {
-          console.log('✅ GitHub authorization successful!');
           setPolling(false);
-          
-          // Refresh the user state in AuthContext
-          await refreshUser();
-          
           onSuccess(result.user, result.redirect);
           onClose();
           resetFlow();
@@ -105,33 +98,17 @@ const GitHubDeviceFlow = ({ open, onClose, onSuccess }) => {
         
         if (result.status === 'pending') {
           // Continue polling
-          console.log('⏳ Still pending, polling again in', pollInterval, 'seconds');
+          console.log('Still pending, polling again in', pollInterval, 'seconds');
           setTimeout(poll, pollInterval * 1000);
         } else if (result.status === 'slow_down') {
           // Slow down polling
-          console.log('⏳ Rate limited, slowing down, polling again in', pollInterval + 5, 'seconds');
+          console.log('Slowing down, polling again in', pollInterval + 5, 'seconds');
           setTimeout(poll, (pollInterval + 5) * 1000);
-        } else {
-          console.log('❌ Unexpected status:', result.status);
-          setPolling(false);
-          setError('Onverwachte response van server');
         }
         
       } catch (err) {
-        console.error('❌ Polling error:', err);
         setPolling(false);
-        
-        // Show more specific error messages
-        let errorMessage = 'Autorisatie mislukt';
-        if (err.error === 'no_verified_email') {
-          errorMessage = 'Geen geverifieerd HU email gevonden in je GitHub account. Registreer eerst met je HU email.';
-        } else if (err.error === 'github_already_linked') {
-          errorMessage = 'Dit gebruikersaccount heeft al een GitHub account gekoppeld.';
-        } else if (err.message) {
-          errorMessage = err.message;
-        }
-        
-        setError(errorMessage);
+        setError(err.message || 'Autorisatie mislukt');
         setStep(2);
       }
     };
