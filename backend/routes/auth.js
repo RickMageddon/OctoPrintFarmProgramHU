@@ -87,6 +87,9 @@ router.post('/register', async (req, res) => {
         );
 
         // Send verification email
+        if (!req.app.locals.emailService) {
+            throw new Error('Email service not initialized');
+        }
         await req.app.locals.emailService.sendVerificationEmail(email, verificationCode);
 
         res.json({ 
