@@ -472,16 +472,16 @@ router.get('/github/callback',
             const githubUsername = githubProfile.username;
             const githubEmails = githubProfile.emails || [];
             
-            // Check if this GitHub account is already linked to another user
+            // SCENARIO 1: Check if this GitHub account is already linked to a user (DIRECT LOGIN)
             const existingGithubUser = await db.get(
                 'SELECT * FROM users WHERE github_id = ?',
                 [githubId]
             );
             
             if (existingGithubUser) {
-                console.log('✅ GitHub account found, logging in user:', existingGithubUser.email);
+                console.log('✅ DIRECT LOGIN: GitHub account found, logging in user:', existingGithubUser.email);
                 
-                // GitHub account is already linked, log them in
+                // GitHub account is already linked, log them in directly
                 await db.run(
                     'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
                     [existingGithubUser.id]
@@ -489,6 +489,7 @@ router.get('/github/callback',
                 
                 // Store user in session for login
                 req.session.user = existingGithubUser;
+                console.log('User stored in session for direct login');
                 
                 // Check if this is their first completed login (for study direction selection)
                 if (!existingGithubUser.first_login_completed) {
@@ -497,6 +498,8 @@ router.get('/github/callback',
                 
                 return res.redirect(`${frontend}/dashboard`);
             }
+
+            // SCENARIO 2: GitHub account not linked yet - try to link to existing verified HU email user
 
             // Find HU email in GitHub emails and match with verified user account
             let matchedUser = null;
@@ -519,18 +522,20 @@ router.get('/github/callback',
 
             if (!matchedUser) {
                 // No verified HU email found in GitHub account
-                console.log('❌ No verified HU email found in GitHub account');
+                console.log('❌ REGISTRATION REQUIRED: No verified HU email found in GitHub account');
+                console.log('GitHub emails found:', githubEmails.map(e => e.value));
                 return res.redirect(`${frontend}/register?error=no_verified_email&message=Geen geverifieerd HU email gevonden. Registreer eerst met je HU email.`);
             }
 
             if (matchedUser.github_linked) {
                 // This user account already has a GitHub account linked
-                console.log('❌ User account already has GitHub linked');
-                return res.redirect(`${frontend}/login?error=github_already_linked`);
+                console.log('❌ CONFLICT: User account already has GitHub linked');
+                return res.redirect(`${frontend}/login?error=github_already_linked&message=Dit HU email is al gekoppeld aan een ander GitHub account.`);
             }
 
-            // Link GitHub account to the verified user account
-            console.log('🔗 Linking GitHub account to user:', matchedUser.email);
+            // SCENARIO 3: Link GitHub account to existing verified HU email user (FIRST TIME LINKING)
+            console.log('🔗 FIRST TIME LINKING: GitHub account to user:', matchedUser.email);
+            console.log('GitHub ID:', githubId, 'Username:', githubUsername);
             await db.run(
                 `UPDATE users SET 
                  github_id = ?, 
@@ -568,6 +573,40 @@ router.get('/github/callback',
         }
     }
 );
+
+// DEBUG: Get all users (remove in production)
+router.get('/debug/users', async (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        const users = await db.all(`
+            SELECT id, username, email, email_verified, github_id, github_username, 
+                   github_linked, study_direction, created_at, last_login 
+            FROM users 
+            ORDER BY created_at DESC
+        `);
+        
+        console.log('📊 Current users in database:', users.length);
+        users.forEach(user => {
+            console.log(`- ${user.email} | GitHub: ${user.github_linked ? '✅' : '❌'} (ID: ${user.github_id || 'none'})`);
+        });
+        
+        res.json({
+            count: users.length,
+            users: users.map(user => ({
+                id: user.id,
+                email: user.email,
+                email_verified: !!user.email_verified,
+                github_linked: !!user.github_linked,
+                github_username: user.github_username,
+                study_direction: user.study_direction,
+                last_login: user.last_login
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
 
 // Submit HU email for verification
 router.post('/verify-email', requireAuth, async (req, res) => {
