@@ -483,4 +483,36 @@ router.get('/status', (req, res) => {
     });
 });
 
+// Admin endpoint to clear pending registrations (for development/testing)
+router.delete('/admin/clear-pending', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const db = req.app.locals.db;
+
+        if (email) {
+            // Clear specific email
+            const result = await db.run(
+                'DELETE FROM pending_registrations WHERE email = ?',
+                [email]
+            );
+            res.json({ 
+                success: true, 
+                message: `Cleared pending registration for ${email}`,
+                deletedCount: result.changes 
+            });
+        } else {
+            // Clear all pending registrations
+            const result = await db.run('DELETE FROM pending_registrations');
+            res.json({ 
+                success: true, 
+                message: 'Cleared all pending registrations',
+                deletedCount: result.changes 
+            });
+        }
+    } catch (error) {
+        console.error('Clear pending registrations error:', error);
+        res.status(500).json({ error: 'Failed to clear pending registrations' });
+    }
+});
+
 module.exports = router;
