@@ -68,7 +68,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - DATABASE_PATH=/app/database/farm.db
+      - DATABASE_PATH=/app/database/database.db
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - SESSION_SECRET=${SESSION_SECRET}
