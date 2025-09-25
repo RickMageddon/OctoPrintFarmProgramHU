@@ -100,9 +100,19 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     try {
+        console.log('🔍 Deserializing user with ID:', id);
+        
+        // Check if database is connected
+        if (!db.db) {
+            console.error('❌ Database not connected in deserializeUser');
+            return done(new Error('Database not connected'), null);
+        }
+        
         const user = await db.get('SELECT * FROM users WHERE id = ?', [id]);
+        console.log('✅ User deserialized:', user ? user.email : 'not found');
         done(null, user);
     } catch (error) {
+        console.error('❌ Error deserializing user:', error);
         done(error, null);
     }
 });
@@ -175,14 +185,17 @@ app.use((req, res) => {
 // Start server
 async function startServer() {
     try {
+        console.log('🔌 Connecting to database...');
         await db.connect();
+        console.log('✅ Database connected successfully');
         
         server.listen(PORT, () => {
-            console.log(`OctoPrint Farm Backend running on port ${PORT}`);
-            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🚀 OctoPrint Farm Backend running on port ${PORT}`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`📊 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        console.error('❌ Failed to start server:', error);
         process.exit(1);
     }
 }
