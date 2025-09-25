@@ -824,6 +824,82 @@ router.post('/setup/study-direction', async (req, res) => {
     }
 });
 
+// Set study direction for current authenticated user (simpler endpoint)
+router.post('/study-direction', requireAuth, async (req, res) => {
+    try {
+        console.log('📚 Study direction update request for current user:', req.body);
+        const { studyDirection } = req.body;
+        
+        if (!studyDirection) {
+            console.error('❌ Missing studyDirection:', studyDirection);
+            return res.status(400).json({ error: 'Study direction is required' });
+        }
+
+        // Validate study direction
+        const validDirections = ['TI', 'CSC', 'SD', 'OPENICT', 'AI', 'BIM'];
+        if (!validDirections.includes(studyDirection)) {
+            console.error('❌ Invalid study direction:', studyDirection);
+            return res.status(400).json({ 
+                error: 'Invalid study direction. Must be one of: TI, CSC, SD, OPENICT, AI, BIM' 
+            });
+        }
+
+        console.log('✅ Valid study direction update request:', { userId: req.user.id, studyDirection });
+        const db = req.app.locals.db;
+
+        // Update user with study direction and mark first login as completed
+        console.log('📝 Updating current user with study direction...');
+        const result = await db.run(
+            `UPDATE users SET 
+             study_direction = ?, 
+             first_login_completed = TRUE 
+             WHERE id = ?`,
+            [studyDirection, req.user.id]
+        );
+
+        console.log('📊 Update result:', result);
+        if (result.changes === 0) {
+            console.error('❌ User not found with ID:', req.user.id);
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        console.log('✅ Current user updated successfully');
+
+        // Log the study direction setup (skip if session_logs table doesn't exist)
+        try {
+            await db.run(
+                `INSERT INTO session_logs (user_id, action, details, ip_address) 
+                 VALUES (?, ?, ?, ?)`,
+                [
+                    req.user.id,
+                    'study_direction_updated',
+                    `Study direction updated to: ${studyDirection}`,
+                    req.ip
+                ]
+            );
+            console.log('✅ Session log created');
+        } catch (logError) {
+            console.warn('⚠️ Could not create session log (table may not exist):', logError.message);
+            // Continue anyway - this is not critical
+        }
+
+        // Update session user data
+        req.session.user.study_direction = studyDirection;
+        req.session.user.first_login_completed = true;
+
+        console.log('🎉 Study direction update completed successfully');
+        res.json({ 
+            success: true, 
+            message: 'Study direction updated successfully',
+            studyDirection: studyDirection
+        });
+
+    } catch (error) {
+        console.error('Study direction update error:', error);
+        res.status(500).json({ error: 'Failed to update study direction' });
+    }
+});
+
 // Get current user info
 router.get('/user', requireAuth, async (req, res) => {
     try {
