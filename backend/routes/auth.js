@@ -453,10 +453,39 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
 
 // GitHub OAuth login - Direct login for existing users
 router.get('/github', (req, res, next) => {
-    console.log('🚀 Starting GitHub OAuth login');
-    passport.authenticate('github', { 
-        scope: ['user:email', 'read:org'] 
-    })(req, res, next);
+    try {
+        console.log('🚀 Starting GitHub OAuth login');
+        console.log('Session ID:', req.sessionID);
+        console.log('Session data:', JSON.stringify(req.session, null, 2));
+        
+        // Check if required environment variables exist
+        if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+            console.error('❌ GitHub OAuth credentials missing');
+            return res.status(500).json({ 
+                error: 'GitHub OAuth not configured properly' 
+            });
+        }
+        
+        // Check if passport strategy exists
+        if (!passport._strategies.github) {
+            console.error('❌ GitHub strategy not found');
+            return res.status(500).json({ 
+                error: 'GitHub authentication strategy not initialized' 
+            });
+        }
+        
+        console.log('✅ Starting GitHub OAuth authentication');
+        passport.authenticate('github', { 
+            scope: ['user:email', 'read:org'] 
+        })(req, res, next);
+        
+    } catch (error) {
+        console.error('❌ Error in GitHub OAuth route:', error);
+        res.status(500).json({ 
+            error: 'Failed to start GitHub authentication',
+            message: error.message 
+        });
+    }
 });
 
 // GitHub OAuth callback - Legacy flow (keeping for backwards compatibility)
