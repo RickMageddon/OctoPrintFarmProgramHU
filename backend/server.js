@@ -95,12 +95,22 @@ passport.use(new GitHubStrategy({
 }));
 
 passport.serializeUser((user, done) => {
-    done(null, user.id);
+    console.log('🔐 Serializing user:', user);
+    // Check if it's a GitHub profile (temporary) or a database user
+    if (user.github_id) {
+        // This is a database user - use database ID
+        console.log('📝 Serializing database user ID:', user.id);
+        done(null, { type: 'db', id: user.id });
+    } else {
+        // This is a GitHub profile - use GitHub ID for temporary storage
+        console.log('📝 Serializing GitHub profile ID:', user.id);
+        done(null, { type: 'github', id: user.id });
+    }
 });
 
-passport.deserializeUser(async (id, done) => {
+passport.deserializeUser(async (data, done) => {
     try {
-        console.log('🔍 Deserializing user with ID:', id);
+        console.log('🔍 Deserializing user with data:', data);
         
         // Check if database is connected
         if (!db.db) {
@@ -108,8 +118,21 @@ passport.deserializeUser(async (id, done) => {
             return done(new Error('Database not connected'), null);
         }
         
-        const user = await db.get('SELECT * FROM users WHERE id = ?', [id]);
-        console.log('✅ User deserialized:', user ? user.email : 'not found');
+        let user;
+        if (data.type === 'db') {
+            // Look up by database ID
+            user = await db.get('SELECT * FROM users WHERE id = ?', [data.id]);
+            console.log('✅ Database user deserialized:', user ? user.email : 'not found');
+        } else if (data.type === 'github') {
+            // Look up by GitHub ID
+            user = await db.get('SELECT * FROM users WHERE github_id = ?', [data.id]);
+            console.log('✅ GitHub user deserialized:', user ? user.email : 'not found');
+        } else {
+            // Legacy support - assume it's a database ID
+            user = await db.get('SELECT * FROM users WHERE id = ?', [data]);
+            console.log('✅ Legacy user deserialized:', user ? user.email : 'not found');
+        }
+        
         done(null, user);
     } catch (error) {
         console.error('❌ Error deserializing user:', error);
