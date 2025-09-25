@@ -115,12 +115,29 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
+  // Check auth status when URL changes (for OAuth redirects)
+  useEffect(() => {
+    const handlePopState = () => {
+      checkAuthStatus();
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Add refresh method that can be called after OAuth redirect
+  const refreshAuthStatus = async () => {
+    setLoading(true);
+    await checkAuthStatus();
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
     refreshUser,
+    refreshAuthStatus,
     verifyEmail,
     verifyCode,
     setStudyDirection,

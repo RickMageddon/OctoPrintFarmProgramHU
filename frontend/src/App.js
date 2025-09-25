@@ -116,8 +116,22 @@ function AdminRoute({ children }) {
 }
 
 function AppContent() {
-  const { user, loading, login } = useAuth();
+  const { user, loading, login, refreshAuthStatus } = useAuth();
   const [showDeviceFlow, setShowDeviceFlow] = useState(false);
+  
+  // Check for OAuth redirect and refresh auth status
+  useEffect(() => {
+    const checkOAuthReturn = async () => {
+      // If we're on dashboard or setup pages and no user is loaded, 
+      // it might be an OAuth redirect
+      const path = window.location.pathname;
+      if ((path === '/dashboard' || path === '/setup/study-direction') && !user && !loading) {
+        await refreshAuthStatus();
+      }
+    };
+    
+    checkOAuthReturn();
+  }, [user, loading, refreshAuthStatus]);
   
   const handleGitHubLogin = () => {
     // For existing users: direct OAuth login
