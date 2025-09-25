@@ -862,9 +862,22 @@ router.delete('/admin/clear-pending', async (req, res) => {
     }
 });
 
+// Simple health check endpoint
+router.get('/debug/health', (req, res) => {
+    res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        message: 'Backend is healthy'
+    });
+});
+
 // Debug endpoint to check GitHub OAuth configuration
 router.get('/debug/github-config', (req, res) => {
     try {
+        console.log('🔍 GitHub config debug requested');
+        
         const config = {
             github_client_id: process.env.GITHUB_CLIENT_ID ? 'SET' : 'NOT SET',
             github_client_secret: process.env.GITHUB_CLIENT_SECRET ? 'SET' : 'NOT SET',
@@ -873,18 +886,22 @@ router.get('/debug/github-config', (req, res) => {
             session_secret: process.env.SESSION_SECRET ? 'SET' : 'NOT SET'
         };
         
+        console.log('✅ GitHub config debug successful');
+        
         res.json({
             success: true,
             config: config,
             passport_strategies: Object.keys(passport._strategies || {}),
+            timestamp: new Date().toISOString(),
             message: 'GitHub OAuth configuration status'
         });
     } catch (error) {
-        console.error('GitHub config debug error:', error);
-        res.json({
+        console.error('❌ GitHub config debug error:', error);
+        res.status(500).json({
             success: false,
             error: error.message,
-            stack: error.stack
+            stack: error.stack,
+            timestamp: new Date().toISOString()
         });
     }
 });
