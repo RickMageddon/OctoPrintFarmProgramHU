@@ -21,6 +21,7 @@ import FilesPage from './pages/FilesPage';
 import QueuePage from './pages/QueuePage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import LiveMonitorPage from './pages/LiveMonitorPage';
 
 // Theme configuration
 const theme = createTheme({
@@ -314,6 +315,12 @@ function AppContent() {
                 </AdminRoute>
               </ProtectedRoute>
             } 
+          />
+
+          {/* Live Monitor - Public access */}
+          <Route 
+            path="/monitor" 
+            element={<LiveMonitorPage />} 
           />
 
           {/* Default redirect */}
