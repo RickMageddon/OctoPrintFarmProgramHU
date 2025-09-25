@@ -862,6 +862,33 @@ router.delete('/admin/clear-pending', async (req, res) => {
     }
 });
 
+// Debug endpoint to check GitHub OAuth configuration
+router.get('/debug/github-config', (req, res) => {
+    try {
+        const config = {
+            github_client_id: process.env.GITHUB_CLIENT_ID ? 'SET' : 'NOT SET',
+            github_client_secret: process.env.GITHUB_CLIENT_SECRET ? 'SET' : 'NOT SET',
+            callback_url: `http://3dprinters:3001/api/auth/github/callback`,
+            frontend_url: process.env.FRONTEND_URL || 'http://localhost:3000',
+            session_secret: process.env.SESSION_SECRET ? 'SET' : 'NOT SET'
+        };
+        
+        res.json({
+            success: true,
+            config: config,
+            passport_strategies: Object.keys(passport._strategies || {}),
+            message: 'GitHub OAuth configuration status'
+        });
+    } catch (error) {
+        console.error('GitHub config debug error:', error);
+        res.json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
 // Debug endpoint to test email service
 router.get('/debug/email-test', async (req, res) => {
     try {
