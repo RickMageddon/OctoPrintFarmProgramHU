@@ -152,6 +152,7 @@ app.use('/api/printers', printerRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/users', userRoutes);
+app.use('/monitor', require('./routes/monitor'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

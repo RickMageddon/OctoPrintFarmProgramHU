@@ -213,19 +213,74 @@ const DashboardPage = () => {
           Dashboard
         </Typography>
 
+        {/* Quick Actions */}
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white',
+              '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.3s' }
+            }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h6" fontWeight={600}>
+                      🚀 Snel Printen
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Upload direct een bestand en start printen
+                    </Typography>
+                  </Box>
+                  <Button 
+                    variant="contained" 
+                    color="secondary" 
+                    onClick={() => setShowUploadForm(v => !v)}
+                    size="large"
+                  >
+                    {showUploadForm ? 'Sluiten' : 'Upload'}
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
+              color: 'white',
+              '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.3s' }
+            }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h6" fontWeight={600}>
+                      📺 Live Monitor
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Bekijk realtime printer status
+                    </Typography>
+                  </Box>
+                  <Button 
+                    variant="contained" 
+                    color="secondary" 
+                    onClick={() => window.open('/monitor', '_blank')}
+                    size="large"
+                  >
+                    Bekijken
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
         {/* Upload/Print Form Section */}
-        <Paper elevation={3} sx={{ p: 3, mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-            <Box>
-              <Typography variant="h5" fontWeight={600}>Nieuw Printbestand Uploaden</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>Upload je G-code bestand en configureer je printopdracht</Typography>
-            </Box>
-            <Button variant="contained" color="secondary" onClick={() => setShowUploadForm(v => !v)}>
-              {showUploadForm ? 'Sluiten' : 'Uploaden'}
-            </Button>
-          </Box>
-          {showUploadForm && (
-            <Box component="form" onSubmit={handleSubmitPrintJob} sx={{ mt: 2, background: 'white', color: 'black', borderRadius: 2, p: 3 }}>
+        {showUploadForm && (
+          <Paper elevation={3} sx={{ p: 3, mb: 4, background: 'rgba(255,255,255,0.95)', borderRadius: 3 }}>
+            <Typography variant="h5" fontWeight={600} mb={1}>📁 Nieuw Printbestand Uploaden</Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Upload je G-code bestand en configureer je printopdracht
+            </Typography>
+            <Box component="form" onSubmit={handleSubmitPrintJob}>
               {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
               {submitSuccess && <Alert severity="success" sx={{ mb: 2 }}>{submitSuccess}</Alert>}
               <Grid container spacing={3}>
@@ -286,8 +341,8 @@ const DashboardPage = () => {
                 </Grid>
               </Grid>
             </Box>
-          )}
-        </Paper>
+          </Paper>
+        )}
         <Typography variant="body1" color="text.secondary" mb={4}>
           Welkom terug, {user.username}! Hier is een overzicht van Printmeister.
         </Typography>
