@@ -862,4 +862,64 @@ router.delete('/admin/clear-pending', async (req, res) => {
     }
 });
 
+// Debug endpoint to test email service
+router.get('/debug/email-test', async (req, res) => {
+    try {
+        console.log('🧪 Testing email service...');
+        
+        // Check if email service is initialized
+        if (!req.app.locals.emailService) {
+            return res.json({ 
+                success: false, 
+                error: 'Email service not initialized',
+                env_vars: {
+                    EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
+                    EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
+                }
+            });
+        }
+        
+        // Test email service connection
+        const connectionTest = await req.app.locals.emailService.testConnection();
+        
+        if (!connectionTest) {
+            return res.json({ 
+                success: false, 
+                error: 'Email service connection failed',
+                env_vars: {
+                    EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
+                    EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
+                }
+            });
+        }
+        
+        // Try to send a test email
+        await req.app.locals.emailService.sendVerificationEmail(
+            'test@student.hu.nl', 
+            '123456'
+        );
+        
+        res.json({ 
+            success: true, 
+            message: 'Email service test successful',
+            env_vars: {
+                EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
+                EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Email test error:', error);
+        res.json({ 
+            success: false, 
+            error: error.message,
+            stack: error.stack,
+            env_vars: {
+                EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
+                EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'NOT SET'
+            }
+        });
+    }
+});
+
 module.exports = router;
