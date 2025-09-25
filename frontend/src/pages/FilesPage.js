@@ -70,11 +70,13 @@ const FilesPage = () => {
     const handleFileSelect = (event) => {
         const file = event.target.files[0];
         if (file) {
-            if (file.name.toLowerCase().endsWith('.gcode') || file.name.toLowerCase().endsWith('.g')) {
+            if (file.name.toLowerCase().endsWith('.bgcode') || 
+                file.name.toLowerCase().endsWith('.gcode') || 
+                file.name.toLowerCase().endsWith('.g')) {
                 setSelectedFile(file);
                 setError('');
             } else {
-                setError('Alleen G-code bestanden (.gcode, .g) zijn toegestaan');
+                setError('Alleen BGCODE/G-code bestanden (.bgcode, .gcode, .g) zijn toegestaan');
                 setSelectedFile(null);
             }
         }
@@ -319,7 +321,7 @@ const FilesPage = () => {
                                 {selectedFile ? selectedFile.name : 'Klik om bestand te selecteren'}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Alleen .gcode en .g bestanden zijn toegestaan
+                                Alleen .bgcode, .gcode en .g bestanden zijn toegestaan
                             </Typography>
                             {selectedFile && (
                                 <Typography variant="caption" display="block" sx={{ mt: 1 }}>
@@ -331,7 +333,7 @@ const FilesPage = () => {
                             type="file"
                             ref={fileInputRef}
                             onChange={handleFileSelect}
-                            accept=".gcode,.g"
+                            accept=".bgcode,.gcode,.g"
                             style={{ display: 'none' }}
                         />
                     </Box>

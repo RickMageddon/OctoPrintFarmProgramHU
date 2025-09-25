@@ -153,6 +153,75 @@ router.post('/:id/resume', requireAuth, requireVerifiedEmail, async (req, res) =
     }
 });
 
+// Home all axes on specific printer
+router.post('/:id/home', requireAuth, requireVerifiedEmail, async (req, res) => {
+    try {
+        const printerId = parseInt(req.params.id);
+
+        if (isNaN(printerId) || printerId < 1 || printerId > 3) {
+            return res.status(400).json({ error: 'Invalid printer ID' });
+        }
+
+        const octoprintService = req.app.locals.octoprintService;
+        const result = await octoprintService.homeAxes(printerId);
+
+        // Log the action
+        const db = req.app.locals.db;
+        await db.run(
+            `INSERT INTO session_logs (user_id, action, details, ip_address) 
+             VALUES (?, ?, ?, ?)`,
+            [
+                req.user.id,
+                'home_axes',
+                `Homed all axes on printer ${printerId}`,
+                req.ip
+            ]
+        );
+
+        res.json(result);
+    } catch (error) {
+        console.error(`Error homing printer ${req.params.id}:`, error);
+        res.status(500).json({ error: error.message || 'Failed to home axes' });
+    }
+});
+
+// Send custom command to printer
+router.post('/:id/command', requireAuth, requireVerifiedEmail, async (req, res) => {
+    try {
+        const printerId = parseInt(req.params.id);
+        const { command } = req.body;
+
+        if (isNaN(printerId) || printerId < 1 || printerId > 3) {
+            return res.status(400).json({ error: 'Invalid printer ID' });
+        }
+
+        if (!command) {
+            return res.status(400).json({ error: 'Command is required' });
+        }
+
+        const octoprintService = req.app.locals.octoprintService;
+        const result = await octoprintService.sendCommand(printerId, command);
+
+        // Log the action
+        const db = req.app.locals.db;
+        await db.run(
+            `INSERT INTO session_logs (user_id, action, details, ip_address) 
+             VALUES (?, ?, ?, ?)`,
+            [
+                req.user.id,
+                'custom_command',
+                `Sent command: ${command} to printer ${printerId}`,
+                req.ip
+            ]
+        );
+
+        res.json(result);
+    } catch (error) {
+        console.error(`Error sending command to printer ${req.params.id}:`, error);
+        res.status(500).json({ error: error.message || 'Failed to send command' });
+    }
+});
+
 // Get files on specific printer
 router.get('/:id/files', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {

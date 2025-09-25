@@ -778,11 +778,11 @@ router.post('/setup/study-direction', async (req, res) => {
         }
 
         // Validate study direction
-        const validDirections = ['TI', 'CSC', 'SD', 'OPENICT', 'AI'];
+        const validDirections = ['TI', 'CSC', 'SD', 'OPENICT', 'AI', 'BIM'];
         if (!validDirections.includes(studyDirection)) {
             console.error('❌ Invalid study direction:', studyDirection);
             return res.status(400).json({ 
-                error: 'Invalid study direction. Must be one of: TI, CSC, SD, OPENICT, AI' 
+                error: 'Invalid study direction. Must be one of: TI, CSC, SD, OPENICT, AI, BIM' 
             });
         }
 

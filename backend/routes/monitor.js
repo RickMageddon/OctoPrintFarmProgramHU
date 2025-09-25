@@ -6,14 +6,28 @@ const db = require('../database');
 
 // Serve the live monitor HTML directly (no authentication required)
 router.get('/', (req, res) => {
-    const htmlPath = path.join(__dirname, '../../live-monitor.html');
+    // Try multiple possible paths
+    const possiblePaths = [
+        path.join(__dirname, '../../live-monitor.html'),
+        path.join(process.cwd(), 'live-monitor.html'),
+        path.join(__dirname, '../../../live-monitor.html')
+    ];
     
-    console.log('Looking for live monitor at:', htmlPath);
-    if (fs.existsSync(htmlPath)) {
-        res.sendFile(htmlPath);
+    let htmlPath = null;
+    for (const testPath of possiblePaths) {
+        console.log('Testing path:', testPath);
+        if (fs.existsSync(testPath)) {
+            htmlPath = testPath;
+            break;
+        }
+    }
+    
+    if (htmlPath) {
+        console.log('Found live monitor at:', htmlPath);
+        res.sendFile(path.resolve(htmlPath));
     } else {
-        console.error('Live monitor file not found at:', htmlPath);
-        res.status(404).send(`Live monitor not found at ${htmlPath}`);
+        console.error('Live monitor file not found. Tried paths:', possiblePaths);
+        res.status(404).send(`Live monitor not found. Tried: ${possiblePaths.join(', ')}`);
     }
 });
 
