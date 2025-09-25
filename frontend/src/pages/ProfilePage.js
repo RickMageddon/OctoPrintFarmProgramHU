@@ -71,52 +71,32 @@ const ProfilePage = () => {
                 setRecentPrints(historyRes.data.recent || []);
             } catch (apiError) {
                 console.error('API Error:', apiError);
+                setError('Kon profiel gegevens niet laden van de server');
                 
-                // Demo data als fallback
+                // Alleen basis user info zonder fake statistieken
                 setProfile({
-                    id: user?.id || 1,
-                    username: user?.username || 'rick.vandervoort',
-                    email: user?.email || 'rick.vandervoort@student.hu.nl',
-                    study_direction: user?.study_direction || 'CSC',
-                    github_id: user?.github_id || 'rickvdvoort',
-                    avatar_url: user?.avatar_url || `https://github.com/${user?.github_id || 'rickvdvoort'}.png`,
-                    created_at: user?.created_at || new Date().toISOString(),
-                    last_login: new Date().toISOString()
+                    id: user?.id,
+                    username: user?.username,
+                    email: user?.email,
+                    study_direction: user?.study_direction,
+                    github_id: user?.github_id,
+                    avatar_url: user?.avatar_url,
+                    created_at: user?.created_at,
+                    last_login: user?.last_login
                 });
 
+                // Lege statistieken - geen fake data
                 setStats({
-                    total_prints: 12,
-                    successful_prints: 10,
-                    failed_prints: 2,
-                    total_print_time: 1847, // minutes
-                    total_filament_used: 285.4, // grams
-                    average_print_time: 154,
-                    success_rate: 83.3
+                    total_prints: 0,
+                    successful_prints: 0,
+                    failed_prints: 0,
+                    total_print_time: 0,
+                    total_filament_used: 0,
+                    average_print_time: 0,
+                    success_rate: 0
                 });
 
-                setRecentPrints([
-                    {
-                        id: 1,
-                        filename: 'phone_case_v2.gcode',
-                        status: 'completed',
-                        print_time: 83,
-                        completed_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-                    },
-                    {
-                        id: 2,
-                        filename: 'mini_figurine.gcode', 
-                        status: 'failed',
-                        print_time: 32,
-                        completed_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-                    },
-                    {
-                        id: 3,
-                        filename: 'prototype_bracket.gcode',
-                        status: 'completed',
-                        print_time: 135,
-                        completed_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-                    }
-                ]);
+                setRecentPrints([]);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);

@@ -46,43 +46,8 @@ const QueuePage = () => {
             setQueueItems(response.data.queue || []);
         } catch (error) {
             console.error('Error fetching queue:', error);
-            setError('Kon wachtrij niet laden');
-            // Demo data als fallback
-            setQueueItems([
-                {
-                    id: 1,
-                    filename: 'phone_case_v2.gcode',
-                    user: { username: 'rick.vandervoort', study_direction: 'CSC' },
-                    status: 'printing',
-                    priority: 'high',
-                    estimated_time: 83, // minutes
-                    progress: 67,
-                    printer_id: 1,
-                    created_at: new Date().toISOString()
-                },
-                {
-                    id: 2,
-                    filename: 'mini_figurine.gcode',
-                    user: { username: 'sarah.devries', study_direction: 'AI' },
-                    status: 'queued',
-                    priority: 'normal',
-                    estimated_time: 45,
-                    progress: 0,
-                    printer_id: null,
-                    created_at: new Date().toISOString()
-                },
-                {
-                    id: 3,
-                    filename: 'prototype_bracket.gcode',
-                    user: { username: 'jan.janssen', study_direction: 'TI' },
-                    status: 'queued',
-                    priority: 'normal',
-                    estimated_time: 135,
-                    progress: 0,
-                    printer_id: null,
-                    created_at: new Date().toISOString()
-                }
-            ]);
+            setError('Kon wachtrij niet laden van de server');
+            setQueueItems([]); // Lege wachtrij in plaats van demo data
         } finally {
             setLoading(false);
         }

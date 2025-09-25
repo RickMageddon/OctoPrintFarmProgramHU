@@ -39,6 +39,8 @@ router.get('/profile', requireAuth, async (req, res) => {
                 hu_email,
                 email_verified,
                 is_admin,
+                study_direction,
+                avatar_url,
                 created_at,
                 last_login
             FROM users 
@@ -49,34 +51,100 @@ router.get('/profile', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get user statistics
-        const stats = await db.get(`
-            SELECT 
-                COUNT(*) as total_jobs,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_jobs,
-                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_jobs,
-                COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_jobs,
-                SUM(CASE WHEN actual_time IS NOT NULL THEN actual_time END) as total_print_time
-            FROM print_queue 
-            WHERE user_id = ?
-        `, [req.user.id]);
-
-        const favoritesCount = await db.get(
-            'SELECT COUNT(*) as count FROM user_favorites WHERE user_id = ?',
-            [req.user.id]
-        );
-
-        res.json({
-            ...user,
-            stats: {
-                ...stats,
-                favorites_count: favoritesCount.count
-            }
-        });
+        res.json(user);
 
     } catch (error) {
         console.error('Error getting user profile:', error);
         res.status(500).json({ error: 'Failed to get user profile' });
+    }
+});
+
+// Get user statistics (separate endpoint)
+router.get('/stats', requireAuth, async (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        
+        // Get user statistics from print_queue
+        const stats = await db.get(`
+            SELECT 
+                COUNT(*) as total_prints,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_prints,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_prints,
+                SUM(CASE WHEN actual_time IS NOT NULL THEN actual_time ELSE 0 END) as total_print_time,
+                AVG(CASE WHEN actual_time IS NOT NULL THEN actual_time ELSE NULL END) as average_print_time
+            FROM print_queue 
+            WHERE user_id = ?
+        `, [req.user.id]);
+
+        // Calculate success rate
+        const successRate = stats.total_prints > 0 
+            ? (stats.successful_prints / stats.total_prints) * 100 
+            : 0;
+
+        // Get total filament used (placeholder - would need to calculate from actual prints)
+        const filamentUsed = stats.successful_prints * 15.5; // Rough estimate per successful print
+
+        res.json({
+            total_prints: stats.total_prints || 0,
+            successful_prints: stats.successful_prints || 0,
+            failed_prints: stats.failed_prints || 0,
+            total_print_time: stats.total_print_time || 0, // in minutes
+            total_filament_used: filamentUsed || 0, // in grams
+            average_print_time: Math.round(stats.average_print_time || 0),
+            success_rate: Math.round(successRate * 10) / 10 // Round to 1 decimal
+        });
+
+    } catch (error) {
+        console.error('Error getting user stats:', error);
+        res.status(500).json({ error: 'Failed to get user statistics' });
+    }
+});
+
+// Get user print history
+router.get('/history', requireAuth, async (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        const limit = parseInt(req.query.limit) || 10;
+        
+        const recent = await db.all(`
+            SELECT 
+                id,
+                filename,
+                status,
+                actual_time as print_time,
+                completed_at,
+                created_at
+            FROM print_queue 
+            WHERE user_id = ? AND status IN ('completed', 'failed', 'cancelled')
+            ORDER BY completed_at DESC
+            LIMIT ?
+        `, [req.user.id, limit]);
+
+        res.json({ recent });
+
+    } catch (error) {
+        console.error('Error getting user history:', error);
+        res.status(500).json({ error: 'Failed to get user print history' });
+    }
+});
+
+// Update user profile
+router.put('/profile', requireAuth, async (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        const { study_direction, email } = req.body;
+        
+        await db.run(`
+            UPDATE users 
+            SET study_direction = ?, email = ?
+            WHERE id = ?
+        `, [study_direction, email, req.user.id]);
+
+        res.json({ success: true, message: 'Profiel bijgewerkt' });
+
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
     }
 });
 

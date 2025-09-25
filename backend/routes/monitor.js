@@ -8,10 +8,12 @@ const db = require('../database');
 router.get('/', (req, res) => {
     const htmlPath = path.join(__dirname, '../../live-monitor.html');
     
+    console.log('Looking for live monitor at:', htmlPath);
     if (fs.existsSync(htmlPath)) {
         res.sendFile(htmlPath);
     } else {
-        res.status(404).send('Live monitor not found');
+        console.error('Live monitor file not found at:', htmlPath);
+        res.status(404).send(`Live monitor not found at ${htmlPath}`);
     }
 });
 
