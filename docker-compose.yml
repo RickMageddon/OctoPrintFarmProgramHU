@@ -6,13 +6,14 @@ services:
     image: octoprint/octoprint:latest
     container_name: octoprint_prusa1
     restart: unless-stopped
+    privileged: true
     ports:
       - "5001:80"
     volumes:
       - octoprint1_data:/octoprint
       - ./uploads:/uploads
-    # devices:
-    #   - "/dev/ttyUSB0:/dev/ttyUSB0"  # Adjust based on your USB connections
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"  # Prusa Printer 1
     environment:
       - ENABLE_MJPG_STREAMER=true
       - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
@@ -24,13 +25,14 @@ services:
     image: octoprint/octoprint:latest
     container_name: octoprint_prusa2
     restart: unless-stopped
+    privileged: true
     ports:
       - "5002:80"
     volumes:
       - octoprint2_data:/octoprint
       - ./uploads:/uploads
-    # devices:
-    #   - "/dev/ttyUSB1:/dev/ttyUSB1"  # Adjust based on your USB connections
+    devices:
+      - "/dev/ttyACM1:/dev/ttyACM1"  # Prusa Printer 2
     environment:
       - ENABLE_MJPG_STREAMER=true
       - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
@@ -42,13 +44,14 @@ services:
     image: octoprint/octoprint:latest
     container_name: octoprint_prusa3
     restart: unless-stopped
+    privileged: true
     ports:
       - "5003:80"
     volumes:
       - octoprint3_data:/octoprint
       - ./uploads:/uploads
-    # devices:
-    #   - "/dev/ttyUSB2:/dev/ttyUSB2"  # Adjust based on your USB connections
+    devices:
+      - "/dev/ttyACM2:/dev/ttyACM2"  # Prusa Printer 3
     environment:
       - ENABLE_MJPG_STREAMER=true
       - MJPG_STREAMER_INPUT=-y -n -r 640x480 -f 10
