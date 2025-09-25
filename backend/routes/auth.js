@@ -755,23 +755,28 @@ router.post('/verify-code', requireAuth, async (req, res) => {
 // Set study direction on first login
 router.post('/setup/study-direction', async (req, res) => {
     try {
+        console.log('📚 Study direction setup request:', req.body);
         const { userId, studyDirection } = req.body;
         
         if (!userId || !studyDirection) {
+            console.error('❌ Missing userId or studyDirection:', { userId, studyDirection });
             return res.status(400).json({ error: 'User ID and study direction are required' });
         }
 
         // Validate study direction
         const validDirections = ['TI', 'CSC', 'SD', 'OPENICT', 'AI'];
         if (!validDirections.includes(studyDirection)) {
+            console.error('❌ Invalid study direction:', studyDirection);
             return res.status(400).json({ 
                 error: 'Invalid study direction. Must be one of: TI, CSC, SD, OPENICT, AI' 
             });
         }
 
+        console.log('✅ Valid study direction setup request:', { userId, studyDirection });
         const db = req.app.locals.db;
 
         // Update user with study direction and mark first login as completed
+        console.log('📝 Updating user with study direction...');
         const result = await db.run(
             `UPDATE users SET 
              study_direction = ?, 
@@ -780,22 +785,33 @@ router.post('/setup/study-direction', async (req, res) => {
             [studyDirection, userId]
         );
 
+        console.log('📊 Update result:', result);
         if (result.changes === 0) {
+            console.error('❌ User not found with ID:', userId);
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Log the study direction setup
-        await db.run(
-            `INSERT INTO session_logs (user_id, action, details, ip_address) 
-             VALUES (?, ?, ?, ?)`,
-            [
-                userId,
-                'study_direction_set',
-                `Study direction set to: ${studyDirection}`,
-                req.ip
-            ]
-        );
+        console.log('✅ User updated successfully');
 
+        // Log the study direction setup (skip if session_logs table doesn't exist)
+        try {
+            await db.run(
+                `INSERT INTO session_logs (user_id, action, details, ip_address) 
+                 VALUES (?, ?, ?, ?)`,
+                [
+                    userId,
+                    'study_direction_set',
+                    `Study direction set to: ${studyDirection}`,
+                    req.ip
+                ]
+            );
+            console.log('✅ Session log created');
+        } catch (logError) {
+            console.warn('⚠️ Could not create session log (table may not exist):', logError.message);
+            // Continue anyway - this is not critical
+        }
+
+        console.log('🎉 Study direction setup completed successfully');
         res.json({ 
             success: true, 
             message: 'Study direction set successfully',
