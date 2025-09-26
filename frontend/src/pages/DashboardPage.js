@@ -124,6 +124,7 @@ const DashboardPage = () => {
         axios.get('/api/users/profile'),
       ]);
 
+      console.log('Dashboard printer status response:', printersResponse.data);
       setPrinterStatus(printersResponse.data);
       
       // Calculate queue stats
@@ -162,8 +163,9 @@ const DashboardPage = () => {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
+  const getStatusIcon = (state) => {
+    if (!state?.text) return <Error color="disabled" />;
+    switch (state.text.toLowerCase()) {
       case 'operational':
         return <CheckCircle color="success" />;
       case 'printing':
@@ -177,8 +179,9 @@ const DashboardPage = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
+  const getStatusColor = (state) => {
+    if (!state?.text) return 'default';
+    switch (state.text.toLowerCase()) {
       case 'operational':
         return 'success';
       case 'printing':
@@ -353,7 +356,9 @@ const DashboardPage = () => {
         </Typography>
         
         <Grid container spacing={3} mb={4}>
-          {printerStatus.map((printer, index) => (
+          {printerStatus.map((printer, index) => {
+          console.log(`Dashboard printer ${index + 1} state:`, printer.state);
+          return (
             <Grid item xs={12} md={4} key={printer.id}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -363,7 +368,7 @@ const DashboardPage = () => {
                 <Card>
                   <CardContent>
                     <Box display="flex" alignItems="center" mb={2}>
-                      {getStatusIcon(printer.state?.text)}
+                      {getStatusIcon(printer.state)}
                       <Typography variant="h6" ml={1}>
                         {printer.name}
                       </Typography>
@@ -371,7 +376,7 @@ const DashboardPage = () => {
                     
                     <Chip
                       label={printer.state?.text || 'Offline'}
-                      color={getStatusColor(printer.state?.text)}
+                      color={getStatusColor(printer.state)}
                       size="small"
                       sx={{ mb: 2 }}
                     />
@@ -411,7 +416,8 @@ const DashboardPage = () => {
                 </Card>
               </motion.div>
             </Grid>
-          ))}
+          );
+        })}
         </Grid>
 
         {/* Statistics */}

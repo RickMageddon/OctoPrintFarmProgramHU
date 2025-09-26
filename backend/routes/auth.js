@@ -341,28 +341,40 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
         
         if (existingGithubUser) {
             console.log('✅ GitHub account already linked, logging in existing user');
-            // GitHub account is already linked, log them in
-            await db.run(
-                'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
-                [existingGithubUser.id]
-            );
+            
+            // Auto-complete first login if user already has study direction
+            let updateQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP';
+            let updateParams = [existingGithubUser.id];
+            
+            if (existingGithubUser.study_direction && !existingGithubUser.first_login_completed) {
+                console.log('🔧 Auto-completing first login for user with existing study direction');
+                updateQuery += ', first_login_completed = TRUE';
+            }
+            
+            updateQuery += ' WHERE id = ?';
+            await db.run(updateQuery, updateParams);
+            
+            // Get updated user data
+            const updatedExistingUser = await db.get('SELECT * FROM users WHERE id = ?', [existingGithubUser.id]);
             
             // Store user in session
-            req.session.user = existingGithubUser;
+            req.session.user = updatedExistingUser;
             
             // Clean up device flow session
             delete req.session.device_code;
             delete req.session.device_code_expires;
             
             // Check if this is their first completed login
-            const redirectPath = !existingGithubUser.first_login_completed 
-                ? `/setup/study-direction?userId=${existingGithubUser.id}`
+            // If user already has study_direction, mark as completed and go to dashboard
+            const needsStudyDirection = !updatedExistingUser.study_direction || !updatedExistingUser.first_login_completed;
+            const redirectPath = needsStudyDirection 
+                ? `/setup/study-direction?userId=${updatedExistingUser.id}`
                 : '/dashboard';
             
             console.log('🚀 Sending success response with redirect:', redirectPath);
             return res.json({ 
                 status: 'success', 
-                user: existingGithubUser,
+                user: updatedExistingUser,
                 redirect: redirectPath
             });
         }
@@ -448,7 +460,9 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
         delete req.session.device_code_expires;
 
         // Check if this is their first completed login
-        const redirectPath = !matchedUser.first_login_completed 
+        // If user already has study_direction, mark as completed and go to dashboard
+        const needsStudyDirection = !matchedUser.study_direction || !matchedUser.first_login_completed;
+        const redirectPath = needsStudyDirection 
             ? `/setup/study-direction?userId=${matchedUser.id}`
             : '/dashboard';
 
@@ -524,19 +538,30 @@ router.get('/github/callback',
             if (existingGithubUser) {
                 console.log('✅ DIRECT LOGIN: GitHub account found, logging in user:', existingGithubUser.email);
                 
-                // GitHub account is already linked, log them in directly
-                await db.run(
-                    'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
-                    [existingGithubUser.id]
-                );
+                // Auto-complete first login if user already has study direction
+                let updateQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP';
+                let updateParams = [existingGithubUser.id];
+                
+                if (existingGithubUser.study_direction && !existingGithubUser.first_login_completed) {
+                    console.log('🔧 Auto-completing first login for user with existing study direction');
+                    updateQuery += ', first_login_completed = TRUE';
+                }
+                
+                updateQuery += ' WHERE id = ?';
+                await db.run(updateQuery, updateParams);
+                
+                // Get updated user data
+                const updatedExistingUser = await db.get('SELECT * FROM users WHERE id = ?', [existingGithubUser.id]);
                 
                 // Store user in session for login
-                req.session.user = existingGithubUser;
+                req.session.user = updatedExistingUser;
                 console.log('User stored in session for direct login');
                 
                 // Check if this is their first completed login (for study direction selection)
-                if (!existingGithubUser.first_login_completed) {
-                    return res.redirect(`${frontend}/setup/study-direction?userId=${existingGithubUser.id}`);
+                // If user already has study_direction, mark as completed and go to dashboard
+                const needsStudyDirection = !updatedExistingUser.study_direction || !updatedExistingUser.first_login_completed;
+                if (needsStudyDirection) {
+                    return res.redirect(`${frontend}/setup/study-direction?userId=${updatedExistingUser.id}`);
                 }
                 
                 return res.redirect(`${frontend}/dashboard`);
@@ -603,7 +628,9 @@ router.get('/github/callback',
             );
 
             // Check if this is their first completed login (for study direction selection)
-            if (!updatedUser.first_login_completed) {
+            // If user already has study_direction, mark as completed and go to dashboard
+            const needsStudyDirection = !updatedUser.study_direction || !updatedUser.first_login_completed;
+            if (needsStudyDirection) {
                 return res.redirect(`${frontend}/setup/study-direction?userId=${updatedUser.id}`);
             }
 
@@ -974,6 +1001,33 @@ router.get('/status', (req, res) => {
             is_admin: req.user.is_admin
         } : null
     });
+});
+
+// Fix users with study direction but not first_login_completed
+router.post('/admin/fix-completed-logins', async (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        
+        // Update users who have study_direction but first_login_completed is still false/null
+        const result = await db.run(`
+            UPDATE users 
+            SET first_login_completed = TRUE 
+            WHERE study_direction IS NOT NULL 
+            AND study_direction != '' 
+            AND (first_login_completed IS NULL OR first_login_completed = FALSE)
+        `);
+        
+        console.log(`Fixed ${result.changes} users with completed logins`);
+        
+        res.json({
+            success: true,
+            message: `Fixed ${result.changes} users who already had study directions`,
+            fixedCount: result.changes
+        });
+    } catch (error) {
+        console.error('Error fixing completed logins:', error);
+        res.status(500).json({ error: 'Failed to fix completed logins' });
+    }
 });
 
 // Admin endpoint to clear pending registrations (for development/testing)
