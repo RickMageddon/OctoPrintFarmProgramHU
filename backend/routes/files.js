@@ -27,8 +27,8 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    // Only allow .gcode files
-    const allowedTypes = ['.gcode', '.g'];
+    // Allow .gcode, .bgcode, and .g files
+    const allowedTypes = ['.gcode', '.bgcode', '.g'];
     const ext = path.extname(file.originalname).toLowerCase();
     
     if (allowedTypes.includes(ext)) {
@@ -173,17 +173,22 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
             }
         }
 
-        // Log the upload
-        await db.run(
-            `INSERT INTO session_logs (user_id, action, details, ip_address) 
-             VALUES (?, ?, ?, ?)`,
-            [
-                req.user.id,
-                'file_uploaded',
-                `Uploaded file: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)}MB)`,
-                req.ip
-            ]
-        );
+        // Log the upload (skip if session_logs table doesn't exist)
+        try {
+            await db.run(
+                `INSERT INTO session_logs (user_id, action, details, ip_address) 
+                 VALUES (?, ?, ?, ?)`,
+                [
+                    req.user.id,
+                    'file_uploaded',
+                    `Uploaded file: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)}MB)`,
+                    req.ip
+                ]
+            );
+        } catch (logError) {
+            console.warn('Could not log file upload (table may not exist):', logError.message);
+            // Continue anyway - logging is not critical
+        }
 
         res.json({
             success: true,

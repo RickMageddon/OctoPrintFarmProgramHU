@@ -279,4 +279,25 @@ router.delete('/:id/files/:filename', requireAuth, requireVerifiedEmail, async (
     }
 });
 
+// Reload OctoPrint API keys (admin only)
+router.post('/reload-api-keys', requireAuth, requireVerifiedEmail, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (!req.user.is_admin) {
+            return res.status(403).json({ error: 'Admin privileges required' });
+        }
+
+        const octoprintService = req.app.locals.octoprintService;
+        octoprintService.reloadApiKeys();
+
+        res.json({ 
+            success: true, 
+            message: 'OctoPrint API keys reloaded successfully' 
+        });
+    } catch (error) {
+        console.error('Error reloading API keys:', error);
+        res.status(500).json({ error: 'Failed to reload API keys' });
+    }
+});
+
 module.exports = router;

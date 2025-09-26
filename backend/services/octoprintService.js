@@ -23,10 +23,27 @@ class OctoPrintService {
                 apiKey: process.env.OCTOPRINT3_API_KEY
             }
         ];
+        
+        // Debug logging for API keys
+        console.log('OctoPrint Service initialized with:');
+        this.printers.forEach(printer => {
+            console.log(`  ${printer.name}: URL=${printer.url}, API Key=${printer.apiKey ? 'SET' : 'NOT SET'}`);
+        });
     }
 
     setDatabase(db) {
         this.db = db;
+    }
+
+    // Reload API keys from environment variables
+    reloadApiKeys() {
+        console.log('Reloading OctoPrint API keys...');
+        this.printers.forEach(printer => {
+            const envVar = `OCTOPRINT${printer.id}_API_KEY`;
+            const newApiKey = process.env[envVar];
+            printer.apiKey = newApiKey;
+            console.log(`  ${printer.name}: API Key ${newApiKey ? 'RELOADED' : 'NOT SET'}`);
+        });
     }
 
     // Get printer configuration by ID
@@ -37,7 +54,12 @@ class OctoPrintService {
     // Create HTTP client for OctoPrint API
     createClient(printer) {
         if (!printer.apiKey) {
-            throw new Error(`API key not configured for ${printer.name}`);
+            // Try to reload API keys once before failing
+            this.reloadApiKeys();
+            
+            if (!printer.apiKey) {
+                throw new Error(`API key not configured for ${printer.name}`);
+            }
         }
 
         return axios.create({

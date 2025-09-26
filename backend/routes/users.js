@@ -36,13 +36,12 @@ router.get('/profile', requireAuth, async (req, res) => {
                 github_id,
                 username,
                 email,
-                hu_email,
                 email_verified,
                 is_admin,
                 study_direction,
-                avatar_url,
                 created_at,
-                last_login
+                last_login,
+                first_login_completed
             FROM users 
             WHERE id = ?
         `, [req.user.id]);
