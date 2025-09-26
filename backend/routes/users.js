@@ -84,14 +84,20 @@ router.get('/stats', requireAuth, async (req, res) => {
         // Get total filament used (placeholder - would need to calculate from actual prints)
         const filamentUsed = stats.successful_prints * 15.5; // Rough estimate per successful print
 
+        // Get favorites count
+        const favoritesCount = await db.get(`
+            SELECT COUNT(*) as count FROM user_favorites WHERE user_id = ?
+        `, [req.user.id]);
+
         res.json({
-            total_prints: stats.total_prints || 0,
-            successful_prints: stats.successful_prints || 0,
-            failed_prints: stats.failed_prints || 0,
+            total_jobs: stats.total_prints || 0,
+            completed_jobs: stats.successful_prints || 0,
+            failed_jobs: stats.failed_prints || 0,
             total_print_time: stats.total_print_time || 0, // in minutes
             total_filament_used: filamentUsed || 0, // in grams
             average_print_time: Math.round(stats.average_print_time || 0),
-            success_rate: Math.round(successRate * 10) / 10 // Round to 1 decimal
+            success_rate: Math.round(successRate * 10) / 10, // Round to 1 decimal
+            favorites_count: favoritesCount.count || 0
         });
 
     } catch (error) {

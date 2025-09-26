@@ -118,13 +118,14 @@ const DashboardPage = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [printersResponse, queueResponse, profileResponse] = await Promise.all([
+      const [printersResponse, queueResponse, userStatsResponse] = await Promise.all([
         axios.get('/api/printers/status'),
         axios.get('/api/queue'),
-        axios.get('/api/users/profile'),
+        axios.get('/api/users/stats'),
       ]);
 
       console.log('Dashboard printer status response:', printersResponse.data);
+      console.log('First printer state structure:', printersResponse.data[0]?.state);
       setPrinterStatus(printersResponse.data);
       
       // Calculate queue stats
@@ -138,7 +139,7 @@ const DashboardPage = () => {
       };
       setQueueStats(stats);
       
-      setUserStats(profileResponse.data.stats);
+      setUserStats(userStatsResponse.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -357,7 +358,12 @@ const DashboardPage = () => {
         
         <Grid container spacing={3} mb={4}>
           {printerStatus.map((printer, index) => {
-          console.log(`Dashboard printer ${index + 1} state:`, printer.state);
+          console.log(`Dashboard printer ${index + 1}:`, { 
+            name: printer.name, 
+            state: printer.state, 
+            stateText: printer.state?.text,
+            fullPrinter: printer 
+          });
           return (
             <Grid item xs={12} md={4} key={printer.id}>
               <motion.div
