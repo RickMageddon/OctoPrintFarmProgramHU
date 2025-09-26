@@ -32,68 +32,83 @@ router.get('/', (req, res) => {
 });
 
 // API endpoint for live monitor data
-router.get('/data', (req, res) => {
+router.get('/data', async (req, res) => {
     try {
-        // Get printer status
-        const printers = db.prepare(`
-            SELECT 
-                id, 
-                name, 
-                status, 
-                bed_temp, 
-                hotend_temp,
-                current_print_job,
-                print_progress,
-                estimated_time_remaining
-            FROM printers 
-            ORDER BY id
-        `).all();
+        const db = req.app.locals.db;
+        const octoprintService = req.app.locals.octoprintService;
 
-        // Get queue data
-        const queue = db.prepare(`
-            SELECT 
-                q.id,
-                q.filename,
-                q.priority,
-                q.estimated_time,
-                q.status,
-                q.created_at,
-                u.username,
-                u.study_direction
-            FROM print_queue q
-            LEFT JOIN users u ON q.user_id = u.id
-            WHERE q.status IN ('queued', 'printing')
-            ORDER BY 
-                CASE q.priority 
-                    WHEN 'high' THEN 1 
-                    WHEN 'normal' THEN 2 
-                    WHEN 'low' THEN 3 
-                END,
-                q.created_at ASC
-            LIMIT 10
-        `).all();
+        // Get real printer status from OctoPrint
+        let printers = [];
+        try {
+            const printerStatuses = await octoprintService.getAllPrinterStatus();
+            printers = printerStatuses.map(printer => ({
+                id: printer.id,
+                name: printer.name,
+                status: printer.state?.text?.toLowerCase() || 'offline',
+                bed_temp: Math.round(printer.temperature?.bed?.actual || 0),
+                hotend_temp: Math.round(printer.temperature?.tool0?.actual || 0),
+                current_print_job: printer.job?.job?.file?.name || null,
+                print_progress: Math.round(printer.job?.progress?.completion || 0),
+                estimated_time_remaining: printer.job?.progress?.printTimeLeft ? Math.round(printer.job.progress.printTimeLeft / 60) : 0
+            }));
+        } catch (printerError) {
+            console.warn('Failed to get printer status, using demo data:', printerError.message);
+        }
 
-        // Get statistics
-        const stats = db.prepare(`
-            SELECT 
-                COUNT(*) as total_prints_month,
-                AVG(CASE WHEN status = 'completed' THEN 1.0 ELSE 0.0 END) * 100 as success_rate,
-                SUM(CASE WHEN status = 'completed' THEN print_time ELSE 0 END) as total_print_time_month
-            FROM print_queue 
-            WHERE created_at >= date('now', '-1 month')
-        `).get();
+        // Get queue data from database
+        let queue = [];
+        try {
+            queue = await db.all(`
+                SELECT 
+                    q.id,
+                    q.filename,
+                    q.priority,
+                    q.estimated_time,
+                    q.status,
+                    q.created_at,
+                    u.username,
+                    u.study_direction
+                FROM print_queue q
+                LEFT JOIN users u ON q.user_id = u.id
+                WHERE q.status IN ('queued', 'printing')
+                ORDER BY 
+                    CASE q.priority 
+                        WHEN 'high' THEN 1 
+                        WHEN 'normal' THEN 2 
+                        WHEN 'low' THEN 3 
+                    END,
+                    q.created_at ASC
+                LIMIT 10
+            `);
+        } catch (queueError) {
+            console.warn('Failed to get queue data:', queueError.message);
+            queue = [];
+        }
+
+        // Get statistics from database
+        let stats = null;
+        try {
+            stats = await db.get(`
+                SELECT 
+                    COUNT(*) as total_prints_month,
+                    AVG(CASE WHEN status = 'completed' THEN 1.0 ELSE 0.0 END) * 100 as success_rate,
+                    SUM(CASE WHEN status = 'completed' THEN print_time ELSE 0 END) as total_print_time_month
+                FROM print_queue 
+                WHERE created_at >= date('now', '-1 month')
+            `);
+        } catch (statsError) {
+            console.warn('Failed to get stats:', statsError.message);
+        }
 
         const activePrinters = printers.filter(p => p.status === 'printing').length;
-        const totalPrinters = printers.length;
+        const totalPrinters = printers.length || 3;
 
         res.json({
-            printers: printers.map(printer => ({
-                ...printer,
-                // Ensure safe temperature values
-                bed_temp: printer.bed_temp || 0,
-                hotend_temp: printer.hotend_temp || 0,
-                print_progress: printer.print_progress || 0
-            })),
+            printers: printers.length > 0 ? printers : [
+                { id: 1, name: 'Prusa Printer 1', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 },
+                { id: 2, name: 'Prusa Printer 2', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 },
+                { id: 3, name: 'Prusa Printer 3', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 }
+            ],
             queue: queue.map(item => ({
                 ...item,
                 user: {

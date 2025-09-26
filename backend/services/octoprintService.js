@@ -336,6 +336,49 @@ class OctoPrintService {
         }
     }
 
+    // Home all axes
+    async homeAxes(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            await client.post('/api/printer/printhead', {
+                command: 'home',
+                axes: ['x', 'y', 'z']
+            });
+
+            return { success: true, message: `Homed all axes on ${printer.name}` };
+        } catch (error) {
+            console.error(`Error homing axes on printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
+    // Send custom G-code command
+    async sendCommand(printerId, command) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            await client.post('/api/printer/command', {
+                command: command
+            });
+
+            return { success: true, message: `Command sent to ${printer.name}` };
+        } catch (error) {
+            console.error(`Error sending command to printer ${printerId}:`, error.message);
+            throw error;
+        }
+    }
+
     // Estimate print time based on file size (rough estimation)
     estimatePrintTime(fileSize) {
         // Very rough estimation: 1MB ≈ 60 minutes

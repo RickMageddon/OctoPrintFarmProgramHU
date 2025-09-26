@@ -82,6 +82,9 @@ services:
       - OCTOPRINT1_URL=http://octoprint1:80
       - OCTOPRINT2_URL=http://octoprint2:80
       - OCTOPRINT3_URL=http://octoprint3:80
+      - OCTOPRINT1_API_KEY=${OCTOPRINT1_API_KEY}
+      - OCTOPRINT2_API_KEY=${OCTOPRINT2_API_KEY}
+      - OCTOPRINT3_API_KEY=${OCTOPRINT3_API_KEY}
     depends_on:
       - octoprint1
       - octoprint2
