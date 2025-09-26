@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm install --only=production --silent --no-audit --no-fund
+RUN npm install --silent --no-audit --no-fund
 
 # Copy source code
 COPY . .
