@@ -22,7 +22,13 @@ import {
     Alert,
     LinearProgress,
     Paper,
-    IconButton
+    IconButton,
+    FormControl,
+    FormLabel,
+    RadioGroup,
+    FormControlLabel,
+    Radio,
+    Input
 } from '@mui/material';
 import {
     Person,
@@ -37,7 +43,8 @@ import {
     Settings,
     CloudUpload,
     History,
-    TrendingUp
+    TrendingUp,
+    PhotoCamera
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,6 +59,17 @@ const ProfilePage = () => {
     const [error, setError] = useState('');
     const [editDialog, setEditDialog] = useState(false);
     const [editForm, setEditForm] = useState({});
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
+
+    const studyDirections = [
+        { value: 'TI', label: 'Technische Informatica (TI)' },
+        { value: 'CSC', label: 'Cyber Security & Cloud (CSC)' },
+        { value: 'SD', label: 'Software Development (SD)' },
+        { value: 'OPENICT', label: 'Open ICT' },
+        { value: 'AI', label: 'Artificial Intelligence (AI)' },
+        { value: 'BIM', label: 'Business IT Management (BIM)' }
+    ];
 
     // Fetch profile data
     const fetchProfile = async () => {
@@ -115,14 +133,51 @@ const ProfilePage = () => {
             study_direction: profile.study_direction,
             email: profile.email
         });
+        setAvatarFile(null);
+        setAvatarPreview(null);
         setEditDialog(true);
+    };
+
+    const handleAvatarChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setAvatarFile(file);
+            const previewUrl = URL.createObjectURL(file);
+            setAvatarPreview(previewUrl);
+        }
     };
 
     const handleSave = async () => {
         try {
+            // First update text fields
             await axios.put('/api/users/profile', editForm);
-            setProfile({ ...profile, ...editForm });
+            
+            // Then handle avatar upload if there's a new file
+            if (avatarFile) {
+                const formData = new FormData();
+                formData.append('avatar', avatarFile);
+                
+                try {
+                    const response = await axios.post('/api/users/avatar', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                    
+                    // Update profile with new avatar URL
+                    setProfile({ ...profile, ...editForm, avatar_url: response.data.avatar_url });
+                } catch (avatarError) {
+                    console.error('Error uploading avatar:', avatarError);
+                    setError('Profiel bijgewerkt, maar profielfoto upload mislukt');
+                }
+            } else {
+                setProfile({ ...profile, ...editForm });
+            }
+            
             setEditDialog(false);
+            
+            // Clean up preview URL
+            if (avatarPreview) {
+                URL.revokeObjectURL(avatarPreview);
+            }
         } catch (error) {
             console.error('Error updating profile:', error);
             setError('Kon profiel niet bijwerken');
@@ -399,14 +454,65 @@ const ProfilePage = () => {
             <Dialog open={editDialog} onClose={() => setEditDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Profiel Bewerken</DialogTitle>
                 <DialogContent>
-                    <Box sx={{ pt: 1 }}>
-                        <TextField
-                            fullWidth
-                            label="Studierichting"
-                            value={editForm.study_direction || ''}
-                            onChange={(e) => setEditForm({ ...editForm, study_direction: e.target.value })}
-                            sx={{ mb: 2 }}
-                        />
+                    <Box sx={{ pt: 2 }}>
+                        {/* Avatar Upload Section */}
+                        <Box sx={{ textAlign: 'center', mb: 3 }}>
+                            <Avatar
+                                src={avatarPreview || profile?.avatar_url}
+                                sx={{ width: 100, height: 100, mx: 'auto', mb: 2 }}
+                            >
+                                <Person sx={{ fontSize: 50 }} />
+                            </Avatar>
+                            <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarChange}
+                                sx={{ display: 'none' }}
+                                id="avatar-upload"
+                            />
+                            <label htmlFor="avatar-upload">
+                                <Button
+                                    variant="outlined"
+                                    component="span"
+                                    startIcon={<PhotoCamera />}
+                                    size="small"
+                                >
+                                    Profielfoto wijzigen
+                                </Button>
+                            </label>
+                        </Box>
+
+                        {/* Study Direction Selection */}
+                        <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+                            <FormLabel component="legend" sx={{ mb: 1, fontSize: '1rem', fontWeight: 600 }}>
+                                Studierichting:
+                            </FormLabel>
+                            <RadioGroup
+                                value={editForm.study_direction || ''}
+                                onChange={(e) => setEditForm({ ...editForm, study_direction: e.target.value })}
+                                sx={{ gap: 0.5 }}
+                            >
+                                {studyDirections.map((direction) => (
+                                    <FormControlLabel
+                                        key={direction.value}
+                                        value={direction.value}
+                                        control={<Radio size="small" />}
+                                        label={direction.label}
+                                        sx={{
+                                            border: '1px solid #e0e0e0',
+                                            borderRadius: 1,
+                                            m: 0,
+                                            p: 1,
+                                            '&:hover': {
+                                                backgroundColor: '#f5f5f5',
+                                            },
+                                        }}
+                                    />
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+
+                        {/* Email Field */}
                         <TextField
                             fullWidth
                             label="E-mail"
@@ -417,7 +523,12 @@ const ProfilePage = () => {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setEditDialog(false)}>
+                    <Button onClick={() => {
+                        setEditDialog(false);
+                        if (avatarPreview) {
+                            URL.revokeObjectURL(avatarPreview);
+                        }
+                    }}>
                         Annuleren
                     </Button>
                     <Button onClick={handleSave} variant="contained">

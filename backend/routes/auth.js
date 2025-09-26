@@ -348,7 +348,7 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
             
             if (existingGithubUser.study_direction && !existingGithubUser.first_login_completed) {
                 console.log('🔧 Auto-completing first login for user with existing study direction');
-                updateQuery += ', first_login_completed = TRUE';
+                updateQuery += ', first_login_completed = 1';
             }
             
             updateQuery += ' WHERE id = ?';
@@ -544,7 +544,7 @@ router.get('/github/callback',
                 
                 if (existingGithubUser.study_direction && !existingGithubUser.first_login_completed) {
                     console.log('🔧 Auto-completing first login for user with existing study direction');
-                    updateQuery += ', first_login_completed = TRUE';
+                    updateQuery += ', first_login_completed = 1';
                 }
                 
                 updateQuery += ' WHERE id = ?';
@@ -821,7 +821,7 @@ router.post('/setup/study-direction', async (req, res) => {
         const result = await db.run(
             `UPDATE users SET 
              study_direction = ?, 
-             first_login_completed = TRUE 
+             first_login_completed = 1 
              WHERE id = ?`,
             [studyDirection, userId]
         );
@@ -904,7 +904,7 @@ router.post('/study-direction', requireAuth, async (req, res) => {
         const result = await db.run(
             `UPDATE users SET 
              study_direction = ?, 
-             first_login_completed = TRUE 
+             first_login_completed = 1 
              WHERE id = ?`,
             [studyDirection, req.user.id]
         );
@@ -1011,7 +1011,7 @@ router.post('/admin/fix-completed-logins', async (req, res) => {
         // Update users who have study_direction but first_login_completed is still false/null
         const result = await db.run(`
             UPDATE users 
-            SET first_login_completed = TRUE 
+            SET first_login_completed = 1 
             WHERE study_direction IS NOT NULL 
             AND study_direction != '' 
             AND (first_login_completed IS NULL OR first_login_completed = FALSE)

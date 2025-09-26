@@ -1,5 +1,41 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure multer for avatar uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = path.join(__dirname, '../../uploads/avatars');
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `avatar-${req.user.id}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Alleen afbeeldingen zijn toegestaan (JPEG, PNG, GIF, WebP)'));
+        }
+    }
+});
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
@@ -145,11 +181,61 @@ router.put('/profile', requireAuth, async (req, res) => {
             WHERE id = ?
         `, [study_direction, email, req.user.id]);
 
+        // Update session
+        req.session.user.study_direction = study_direction;
+        req.session.user.email = email;
+
         res.json({ success: true, message: 'Profiel bijgewerkt' });
 
     } catch (error) {
         console.error('Error updating profile:', error);
         res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// Upload avatar
+router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Geen bestand geüpload' });
+        }
+
+        const db = req.app.locals.db;
+        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+        // Delete old avatar if exists
+        const oldUser = await db.get('SELECT avatar_url FROM users WHERE id = ?', [req.user.id]);
+        if (oldUser?.avatar_url && oldUser.avatar_url.startsWith('/uploads/avatars/')) {
+            const oldPath = path.join(__dirname, '../../', oldUser.avatar_url);
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+        }
+
+        // Update user with new avatar URL
+        await db.run(
+            'UPDATE users SET avatar_url = ? WHERE id = ?',
+            [avatarUrl, req.user.id]
+        );
+
+        // Update session
+        req.session.user.avatar_url = avatarUrl;
+
+        res.json({
+            success: true,
+            message: 'Profielfoto bijgewerkt',
+            avatar_url: avatarUrl
+        });
+
+    } catch (error) {
+        console.error('Error uploading avatar:', error);
+        
+        // Clean up uploaded file on error
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        
+        res.status(500).json({ error: 'Failed to upload avatar' });
     }
 });
 

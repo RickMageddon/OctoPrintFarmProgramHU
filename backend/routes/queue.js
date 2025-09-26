@@ -64,13 +64,17 @@ router.get('/', requireAuth, requireVerifiedEmail, async (req, res) => {
 // Add job to queue
 router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {
-        const { favoriteId, printerId, priority = 0 } = req.body;
+        const { favoriteId, fileId, printerId, printer, priority = 0 } = req.body;
+        
+        // Accept either favoriteId/fileId and printerId/printer for flexibility
+        const actualFavoriteId = favoriteId || fileId;
+        const actualPrinterId = printerId || (printer === 'auto' ? 1 : parseInt(printer)) || 1;
 
-        if (!favoriteId || !printerId) {
-            return res.status(400).json({ error: 'Favorite ID and Printer ID are required' });
+        if (!actualFavoriteId) {
+            return res.status(400).json({ error: 'File ID is required' });
         }
 
-        if (printerId < 1 || printerId > 3) {
+        if (actualPrinterId < 1 || actualPrinterId > 3) {
             return res.status(400).json({ error: 'Invalid printer ID' });
         }
 
@@ -82,7 +86,7 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
             `SELECT filename, original_filename, file_path, file_size 
              FROM user_favorites 
              WHERE id = ? AND user_id = ?`,
-            [favoriteId, req.user.id]
+            [actualFavoriteId, req.user.id]
         );
 
         if (!favorite) {
@@ -93,7 +97,7 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
         const existingJob = await db.get(
             `SELECT id FROM print_queue 
              WHERE user_id = ? AND printer_id = ? AND status IN ('queued', 'printing')`,
-            [req.user.id, printerId]
+            [req.user.id, actualPrinterId]
         );
 
         if (existingJob) {
@@ -124,7 +128,7 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
              VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 req.user.id,
-                printerId,
+                actualPrinterId,
                 favorite.original_filename,
                 favorite.file_path,
                 priority,
@@ -133,28 +137,34 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
         );
 
         // Log the action
-        await db.run(
-            `INSERT INTO session_logs (user_id, action, details, ip_address) 
-             VALUES (?, ?, ?, ?)`,
-            [
-                req.user.id,
-                'job_queued',
-                `Queued ${favorite.original_filename} for printer ${printerId}`,
-                req.ip
-            ]
-        );
+        try {
+            await db.run(
+                `INSERT INTO session_logs (user_id, action, details, ip_address) 
+                 VALUES (?, ?, ?, ?)`,
+                [
+                    req.user.id,
+                    'job_queued',
+                    `Queued ${favorite.original_filename} for printer ${actualPrinterId}`,
+                    req.ip || '127.0.0.1'
+                ]
+            );
+        } catch (logError) {
+            console.warn('Could not log action:', logError.message);
+        }
 
         // Emit socket event for real-time updates
-        req.app.locals.io.emit('queue-updated', {
-            action: 'added',
-            jobId: result.id,
-            userId: req.user.id,
-            printerId: printerId
-        });
+        if (req.app.locals.io) {
+            req.app.locals.io.emit('queue-updated', {
+                action: 'added',
+                jobId: result.lastID,
+                userId: req.user.id,
+                printerId: actualPrinterId
+            });
+        }
 
         res.json({
             success: true,
-            jobId: result.id,
+            jobId: result.lastID,
             message: 'Job added to queue',
             estimatedTime: estimatedTime
         });
