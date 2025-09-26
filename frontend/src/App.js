@@ -319,6 +319,10 @@ function AppContent() {
 
           {/* Live Monitor - Public access */}
           <Route 
+            path="/live-monitor" 
+            element={<LiveMonitorPage />} 
+          />
+          <Route 
             path="/monitor" 
             element={<LiveMonitorPage />} 
           />

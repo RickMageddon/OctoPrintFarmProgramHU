@@ -265,7 +265,7 @@ const DashboardPage = () => {
                   <Button 
                     variant="contained" 
                     color="secondary" 
-                    onClick={() => window.open('/monitor', '_blank')}
+                    onClick={() => window.open('/live-monitor', '_blank')}
                     size="large"
                   >
                     Bekijken
