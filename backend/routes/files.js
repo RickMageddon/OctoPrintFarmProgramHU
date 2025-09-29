@@ -241,7 +241,47 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
     }
 });
 
-// Delete favorite file
+// Delete user file (new endpoint)
+router.delete('/:id', requireAuth, requireVerifiedEmail, async (req, res) => {
+    try {
+        const fileId = parseInt(req.params.id);
+        const db = req.app.locals.db;
+
+        // Get file info first to check ownership and get file path
+        const file = await db.get(
+            'SELECT * FROM user_favorites WHERE id = ? AND user_id = ?',
+            [fileId, req.user.id]
+        );
+
+        if (!file) {
+            return res.status(404).json({ error: 'File not found or you do not have permission to delete it' });
+        }
+
+        // Delete from database
+        await db.run(
+            'DELETE FROM user_favorites WHERE id = ? AND user_id = ?',
+            [fileId, req.user.id]
+        );
+
+        // Delete physical file
+        try {
+            if (file.file_path && require('fs').existsSync(file.file_path)) {
+                await require('fs').promises.unlink(file.file_path);
+            }
+        } catch (fsError) {
+            console.warn('Could not delete physical file:', fsError.message);
+            // Continue anyway, database record is already deleted
+        }
+
+        res.json({ success: true, message: 'File deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        res.status(500).json({ error: 'Failed to delete file' });
+    }
+});
+
+// Delete favorite file (legacy endpoint)
 router.delete('/favorites/:id', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {
         const favoriteId = parseInt(req.params.id);

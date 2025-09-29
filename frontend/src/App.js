@@ -96,7 +96,7 @@ function ProtectedRoute({ children, requireEmailVerified = true, requireStudyDir
   }
 
   if (requireStudyDirection && !user.study_direction) {
-    return <Navigate to="/setup/study-direction" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -126,7 +126,7 @@ function AppContent() {
       // If we're on dashboard or setup pages and no user is loaded, 
       // it might be an OAuth redirect
       const path = window.location.pathname;
-      if ((path === '/dashboard' || path === '/setup/study-direction') && !user && !loading) {
+      if ((path === '/dashboard' || path === '/dashboard') && !user && !loading) {
         await refreshAuthStatus();
       }
     };
@@ -186,7 +186,7 @@ function AppContent() {
                   user.study_direction ? (
                     <Navigate to="/dashboard" replace />
                   ) : (
-                    <Navigate to="/setup/study-direction" replace />
+                    <Navigate to="/dashboard" replace />
                   )
                 ) : (
                   <Navigate to="/verify-email" replace />
@@ -210,7 +210,7 @@ function AppContent() {
                   user.study_direction ? (
                     <Navigate to="/dashboard" replace />
                   ) : (
-                    <Navigate to="/setup/study-direction" replace />
+                    <Navigate to="/dashboard" replace />
                   )
                 ) : (
                   <Navigate to="/verify-email" replace />
@@ -231,7 +231,7 @@ function AppContent() {
                 user.study_direction ? (
                   <Navigate to="/dashboard" replace />
                 ) : (
-                  <Navigate to="/setup/study-direction" replace />
+                  <Navigate to="/dashboard" replace />
                 )
               ) : (
                 <Navigate to="/login" replace />
@@ -241,7 +241,7 @@ function AppContent() {
 
           {/* Study direction setup route */}
           <Route 
-            path="/setup/study-direction" 
+            path="/dashboard" 
             element={
               user ? (
                 user.email_verified ? (
@@ -334,7 +334,7 @@ function AppContent() {
               <Navigate to={
                 user ? (
                   user.email_verified ? (
-                    user.study_direction ? "/dashboard" : "/setup/study-direction"
+                    user.study_direction ? "/dashboard" : "/dashboard"
                   ) : "/verify-email"
                 ) : "/login"
               } replace />
@@ -348,7 +348,7 @@ function AppContent() {
               <Navigate to={
                 user ? (
                   user.email_verified ? (
-                    user.study_direction ? "/dashboard" : "/setup/study-direction"
+                    user.study_direction ? "/dashboard" : "/dashboard"
                   ) : "/verify-email"
                 ) : "/login"
               } replace />
