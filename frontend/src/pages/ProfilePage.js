@@ -513,7 +513,7 @@ const ProfilePage = () => {
                             </Avatar>
                             <Input
                                 type="file"
-                                accept="image/*"
+                                accept=".jpg,.jpeg,.png"
                                 onChange={handleAvatarChange}
                                 sx={{ display: 'none' }}
                                 id="avatar-upload"

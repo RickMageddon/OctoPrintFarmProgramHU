@@ -48,7 +48,12 @@ const upload = multer({
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
-    if (req.isAuthenticated()) {
+    // Check both Passport authentication and session user
+    if (req.isAuthenticated() || req.session.user) {
+        // Ensure req.user is set for consistency
+        if (!req.user && req.session.user) {
+            req.user = req.session.user;
+        }
         return next();
     }
     res.status(401).json({ error: 'Authentication required' });

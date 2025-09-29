@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
@@ -13,11 +13,29 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children, socket }) => {
   const { user } = useAuth();
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     console.log('🔌 Socket effect triggered, user:', user);
     console.log('📧 Email verified:', user?.email_verified);
     console.log('🔗 Socket connected:', socket.connected);
+
+    // Set up socket event listeners
+    const handleConnect = () => {
+      console.log('✅ Socket connected');
+      setIsConnected(true);
+    };
+
+    const handleDisconnect = () => {
+      console.log('❌ Socket disconnected');
+      setIsConnected(false);
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
+    // Set initial state
+    setIsConnected(socket.connected);
 
     if (user) {
       // Connect socket when user is authenticated (email verification not required for basic functionality)
@@ -30,18 +48,17 @@ export const SocketProvider = ({ children, socket }) => {
         
         // Join general room for printer updates
         socket.emit('join-room', 'general');
-
-        console.log('✅ Socket connected');
       }
     } else if (socket.connected) {
       // Disconnect socket when user is not authenticated
       console.log('🔌 Disconnecting socket...');
       socket.disconnect();
-      console.log('❌ Socket disconnected');
     }
 
     return () => {
-      if (socket.connected) {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      if (socket.connected && !user) {
         socket.disconnect();
       }
     };
@@ -49,7 +66,7 @@ export const SocketProvider = ({ children, socket }) => {
 
   const value = {
     socket,
-    isConnected: socket.connected,
+    isConnected,
   };
 
   return (
