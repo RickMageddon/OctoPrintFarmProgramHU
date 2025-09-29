@@ -118,7 +118,7 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
 
         let favoriteToReplace = null;
 
-        if (currentCount.count >= 10) {
+        if (currentCount.count >= 15) {
             // Get oldest favorite for potential replacement
             favoriteToReplace = await db.get(
                 `SELECT id, filename, original_filename, file_path 

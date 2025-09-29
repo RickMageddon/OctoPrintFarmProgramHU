@@ -13,7 +13,6 @@ import LoadingSpinner from './components/Common/LoadingSpinner';
 // Pages
 import LoginPage from './pages/LoginPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
-import StudyDirectionSetup from './pages/StudyDirectionSetup';
 import GitHubDeviceFlow from './components/GitHubDeviceFlow';
 import DashboardPage from './pages/DashboardPage';
 import PrintersPage from './pages/PrintersPage';
@@ -239,23 +238,13 @@ function AppContent() {
             } 
           />
 
-          {/* Study direction setup route */}
+          {/* Dashboard route */}
           <Route 
             path="/dashboard" 
             element={
-              user ? (
-                user.email_verified ? (
-                  user.study_direction ? (
-                    <Navigate to="/dashboard" replace />
-                  ) : (
-                    <StudyDirectionSetup />
-                  )
-                ) : (
-                  <Navigate to="/verify-email" replace />
-                )
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              <ProtectedRoute requireStudyDirection={false}>
+                <DashboardPage />
+              </ProtectedRoute>
             } 
           />
 
