@@ -195,13 +195,23 @@ router.put('/profile', requireAuth, async (req, res) => {
 
 // Upload avatar
 router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) => {
+    console.log('🖼️ Avatar upload request received');
+    console.log('👤 User ID:', req.user?.id);
+    console.log('📁 File info:', req.file ? {
+        filename: req.file.filename,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+    } : 'No file');
+
     try {
         if (!req.file) {
+            console.log('❌ No file uploaded');
             return res.status(400).json({ error: 'Geen bestand geüpload' });
         }
 
         const db = req.app.locals.db;
         const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+        console.log('🔗 Generated avatar URL:', avatarUrl);
 
         // Delete old avatar if exists
         const oldUser = await db.get('SELECT avatar_url FROM users WHERE id = ?', [req.user.id]);
@@ -209,6 +219,7 @@ router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) =>
             const oldPath = path.join(__dirname, '../../', oldUser.avatar_url);
             if (fs.existsSync(oldPath)) {
                 fs.unlinkSync(oldPath);
+                console.log('🗑️ Deleted old avatar:', oldPath);
             }
         }
 
@@ -217,10 +228,13 @@ router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) =>
             'UPDATE users SET avatar_url = ? WHERE id = ?',
             [avatarUrl, req.user.id]
         );
+        console.log('💾 Database updated with new avatar URL');
 
         // Update session
         req.session.user.avatar_url = avatarUrl;
+        console.log('🔄 Session updated');
 
+        console.log('✅ Avatar upload successful');
         res.json({
             success: true,
             message: 'Profielfoto bijgewerkt',
@@ -228,11 +242,13 @@ router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) =>
         });
 
     } catch (error) {
-        console.error('Error uploading avatar:', error);
+        console.error('💥 Error uploading avatar:', error);
+        console.error('📋 Error stack:', error.stack);
         
         // Clean up uploaded file on error
         if (req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
+            console.log('🗑️ Cleaned up uploaded file after error');
         }
         
         res.status(500).json({ error: 'Failed to upload avatar' });
