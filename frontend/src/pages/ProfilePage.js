@@ -141,6 +141,23 @@ const ProfilePage = () => {
     const handleAvatarChange = (event) => {
         const file = event.target.files[0];
         if (file) {
+            // Check file size (2MB limit)
+            const maxSize = 2 * 1024 * 1024; // 2MB
+            if (file.size > maxSize) {
+                setError('Profielfoto mag maximaal 2MB groot zijn. Probeer een kleinere afbeelding.');
+                event.target.value = ''; // Clear the input
+                return;
+            }
+
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                setError('Alleen JPG, PNG, GIF en WebP afbeeldingen zijn toegestaan.');
+                event.target.value = ''; // Clear the input
+                return;
+            }
+
+            setError(''); // Clear any previous errors
             setAvatarFile(file);
             const previewUrl = URL.createObjectURL(file);
             setAvatarPreview(previewUrl);
@@ -166,7 +183,15 @@ const ProfilePage = () => {
                     setProfile({ ...profile, ...editForm, avatar_url: response.data.avatar_url });
                 } catch (avatarError) {
                     console.error('Error uploading avatar:', avatarError);
-                    setError('Profiel bijgewerkt, maar profielfoto upload mislukt');
+                    
+                    // Handle specific error codes
+                    if (avatarError.response?.status === 413) {
+                        setError('Profielfoto is te groot (max 2MB). Kies een kleinere afbeelding.');
+                    } else if (avatarError.response?.status === 400) {
+                        setError('Ongeldig bestandstype. Alleen JPG, PNG, GIF en WebP zijn toegestaan.');
+                    } else {
+                        setError('Profiel bijgewerkt, maar profielfoto upload mislukt. Probeer het later opnieuw.');
+                    }
                 }
             } else {
                 setProfile({ ...profile, ...editForm });
