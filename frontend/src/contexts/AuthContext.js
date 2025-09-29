@@ -22,14 +22,19 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('🔍 Checking auth status...');
       const response = await axios.get('/api/auth/status');
+      console.log('📨 Auth status response:', response.data);
+      
       if (response.data.authenticated) {
+        console.log('✅ User authenticated:', response.data.user);
         setUser(response.data.user);
       } else {
+        console.log('❌ User not authenticated');
         setUser(null);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('💥 Error checking auth status:', error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -71,10 +76,12 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUser = async () => {
     try {
+      console.log('🔄 Refreshing user data...');
       const response = await axios.get('/api/auth/user');
+      console.log('📨 Refresh user response:', response.data);
       setUser(response.data);
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      console.error('💥 Error refreshing user:', error);
     }
   };
 

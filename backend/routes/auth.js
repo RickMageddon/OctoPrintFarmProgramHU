@@ -989,8 +989,13 @@ router.get('/status', (req, res) => {
         user: req.isAuthenticated() ? {
             id: req.user.id,
             username: req.user.username,
+            email: req.user.email,
             email_verified: req.user.email_verified,
-            is_admin: req.user.is_admin
+            is_admin: req.user.is_admin,
+            study_direction: req.user.study_direction,
+            avatar_url: req.user.avatar_url,
+            created_at: req.user.created_at,
+            last_login: req.user.last_login
         } : null
     });
 });
