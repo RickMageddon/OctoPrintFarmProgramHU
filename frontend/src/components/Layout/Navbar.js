@@ -22,6 +22,7 @@ import {
   Settings,
   Logout,
   AdminPanelSettings,
+  Warning,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSocket } from '../../contexts/SocketContext';
@@ -120,9 +121,19 @@ const Navbar = () => {
           sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', ml: 2 }}
           onClick={() => navigate('/profile')}
         >
-          <Avatar sx={{ width: 32, height: 32 }}>
-            {user?.username?.charAt(0).toUpperCase()}
-          </Avatar>
+          <Badge
+            badgeContent={!user?.study_direction ? <Warning sx={{ fontSize: 16 }} /> : null}
+            color="warning"
+            overlap="circular"
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+          >
+            <Avatar sx={{ width: 32, height: 32 }}>
+              {user?.username?.charAt(0).toUpperCase()}
+            </Avatar>
+          </Badge>
         </Box>
 
         <Menu

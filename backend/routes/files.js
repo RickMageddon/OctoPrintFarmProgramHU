@@ -62,7 +62,26 @@ const requireVerifiedEmail = (req, res, next) => {
     res.status(403).json({ error: 'HU email verification required' });
 };
 
-// Get user's favorite files
+// Get user's favorite files  
+router.get('/user', requireAuth, requireVerifiedEmail, async (req, res) => {
+    try {
+        const db = req.app.locals.db;
+        const files = await db.all(
+            `SELECT id, filename, original_filename, file_size, upload_date 
+             FROM user_favorites 
+             WHERE user_id = ? 
+             ORDER BY upload_date DESC`,
+            [req.user.id]
+        );
+
+        res.json({ files });
+    } catch (error) {
+        console.error('Error getting user files:', error);
+        res.status(500).json({ error: 'Failed to get user files' });
+    }
+});
+
+// Get user's favorite files (legacy endpoint)
 router.get('/favorites', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {
         const db = req.app.locals.db;

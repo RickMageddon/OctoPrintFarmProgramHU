@@ -243,6 +243,26 @@ const ProfilePage = () => {
                     </Alert>
                 )}
 
+                {/* Study Direction Warning */}
+                {!profile?.study_direction && (
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                        <Typography variant="h6" gutterBottom>
+                            Studierichting ontbreekt!
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 2 }}>
+                            Je hebt nog geen studierichting ingesteld. Dit is verplicht om het systeem te kunnen gebruiken.
+                        </Typography>
+                        <Button 
+                            variant="contained" 
+                            color="warning"
+                            onClick={handleEdit}
+                            size="small"
+                        >
+                            Studierichting instellen
+                        </Button>
+                    </Alert>
+                )}
+
                 <Grid container spacing={3}>
                     {/* Profile Information */}
                     <Grid item xs={12} md={4}>

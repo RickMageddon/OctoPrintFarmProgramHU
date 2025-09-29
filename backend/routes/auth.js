@@ -365,17 +365,16 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
             delete req.session.device_code_expires;
             
             // Check if this is their first completed login
-            // If user already has study_direction, mark as completed and go to dashboard
-            const needsStudyDirection = !updatedExistingUser.study_direction || !updatedExistingUser.first_login_completed;
-            const redirectPath = needsStudyDirection 
-                ? `/setup/study-direction?userId=${updatedExistingUser.id}`
-                : '/dashboard';
+            // Always redirect to dashboard, but indicate if study direction is missing
+            const needsStudyDirection = !updatedExistingUser.study_direction;
+            const redirectPath = '/dashboard';
             
             console.log('🚀 Sending success response with redirect:', redirectPath);
             return res.json({ 
                 status: 'success', 
                 user: updatedExistingUser,
-                redirect: redirectPath
+                redirect: redirectPath,
+                needsStudyDirection: needsStudyDirection
             });
         }
 
@@ -460,17 +459,16 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
         delete req.session.device_code_expires;
 
         // Check if this is their first completed login
-        // If user already has study_direction, mark as completed and go to dashboard
-        const needsStudyDirection = !matchedUser.study_direction || !matchedUser.first_login_completed;
-        const redirectPath = needsStudyDirection 
-            ? `/setup/study-direction?userId=${matchedUser.id}`
-            : '/dashboard';
+        // Always redirect to dashboard, but indicate if study direction is missing
+        const needsStudyDirection = !matchedUser.study_direction;
+        const redirectPath = '/dashboard';
 
         console.log('🚀 Sending success response with redirect:', redirectPath);
         res.json({ 
             status: 'success', 
             user: updatedUser,
-            redirect: redirectPath
+            redirect: redirectPath,
+            needsStudyDirection: needsStudyDirection
         });
 
     } catch (error) {
@@ -558,11 +556,8 @@ router.get('/github/callback',
                 console.log('User stored in session for direct login');
                 
                 // Check if this is their first completed login (for study direction selection)
-                // If user already has study_direction, mark as completed and go to dashboard
-                const needsStudyDirection = !updatedExistingUser.study_direction || !updatedExistingUser.first_login_completed;
-                if (needsStudyDirection) {
-                    return res.redirect(`${frontend}/setup/study-direction?userId=${updatedExistingUser.id}`);
-                }
+                // Always redirect to dashboard, notification will be shown if needed
+                const needsStudyDirection = !updatedExistingUser.study_direction;
                 
                 return res.redirect(`${frontend}/dashboard`);
             }
@@ -628,11 +623,8 @@ router.get('/github/callback',
             );
 
             // Check if this is their first completed login (for study direction selection)
-            // If user already has study_direction, mark as completed and go to dashboard
-            const needsStudyDirection = !updatedUser.study_direction || !updatedUser.first_login_completed;
-            if (needsStudyDirection) {
-                return res.redirect(`${frontend}/setup/study-direction?userId=${updatedUser.id}`);
-            }
+            // Always redirect to dashboard, notification will be shown if needed
+            const needsStudyDirection = !updatedUser.study_direction;
 
             // Successful GitHub linking and login
             res.redirect(`${frontend}/dashboard`);
