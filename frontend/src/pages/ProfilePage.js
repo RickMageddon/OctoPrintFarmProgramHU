@@ -51,7 +51,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 const ProfilePage = () => {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [profile, setProfile] = useState(null);
     const [stats, setStats] = useState(null);
     const [recentPrints, setRecentPrints] = useState([]);
@@ -171,6 +171,9 @@ const ProfilePage = () => {
             } else {
                 setProfile({ ...profile, ...editForm });
             }
+            
+            // Refresh user context to update navigation access
+            await refreshUser();
             
             setEditDialog(false);
             
