@@ -15,21 +15,29 @@ export const SocketProvider = ({ children, socket }) => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user && user.email_verified) {
-      // Connect socket when user is authenticated and verified
-      socket.connect();
-      
-      // Join user room for personal notifications
-      socket.emit('join-room', `user-${user.id}`);
-      
-      // Join general room for printer updates
-      socket.emit('join-room', 'general');
+    console.log('🔌 Socket effect triggered, user:', user);
+    console.log('📧 Email verified:', user?.email_verified);
+    console.log('🔗 Socket connected:', socket.connected);
 
-      console.log('Socket connected');
+    if (user) {
+      // Connect socket when user is authenticated (email verification not required for basic functionality)
+      if (!socket.connected) {
+        console.log('🚀 Connecting socket...');
+        socket.connect();
+        
+        // Join user room for personal notifications
+        socket.emit('join-room', `user-${user.id}`);
+        
+        // Join general room for printer updates
+        socket.emit('join-room', 'general');
+
+        console.log('✅ Socket connected');
+      }
     } else if (socket.connected) {
       // Disconnect socket when user is not authenticated
+      console.log('🔌 Disconnecting socket...');
       socket.disconnect();
-      console.log('Socket disconnected');
+      console.log('❌ Socket disconnected');
     }
 
     return () => {
