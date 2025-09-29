@@ -250,15 +250,6 @@ function AppContent() {
 
           {/* Protected routes */}
           <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
             path="/printers" 
             element={
               <ProtectedRoute>
@@ -288,7 +279,7 @@ function AppContent() {
           <Route 
             path="/profile" 
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requireStudyDirection={false}>
                 <ProfilePage />
               </ProtectedRoute>
             } 
