@@ -69,7 +69,7 @@ const DashboardPage = () => {
       const uploadRes = await axios.post('/api/files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const fileId = uploadRes.data.fileId || uploadRes.data.id;
+      const fileId = uploadRes.data.file.id; // Get the correct ID from the upload response
       // 2. Voeg toe aan queue
       const queueRes = await axios.post('/api/queue/add', {
         favoriteId: fileId, // Use favoriteId instead of fileId to match backend expectation

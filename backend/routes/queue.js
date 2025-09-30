@@ -71,20 +71,64 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {
         const { favoriteId, fileId, printerId, printer, priority = 0 } = req.body;
         
-        // Accept either favoriteId/fileId and printerId/printer for flexibility
+        // Accept either favoriteId/fileId for flexibility
         const actualFavoriteId = favoriteId || fileId;
-        const actualPrinterId = printerId || (printer === 'auto' ? 1 : parseInt(printer)) || 1;
-
+        
         if (!actualFavoriteId) {
             return res.status(400).json({ error: 'File ID is required' });
+        }
+
+        const db = req.app.locals.db;
+        const octoprintService = req.app.locals.octoprintService;
+
+        // Auto-assign printer if not specified or set to 'auto'
+        let actualPrinterId;
+        if (!printerId && (!printer || printer === 'auto')) {
+            // Find best available printer
+            console.log('🔍 Auto-assigning printer...');
+            
+            try {
+                const allPrinters = await octoprintService.getAllPrinterStatus();
+                console.log('🖨️ Available printers:', allPrinters.map(p => ({ id: p.id, name: p.name, state: p.state?.text })));
+                
+                // Find operational printer with no active job
+                const availablePrinter = allPrinters.find(printer => 
+                    printer.state?.text === 'Operational' && 
+                    !printer.job?.job?.file?.name
+                );
+                
+                if (availablePrinter) {
+                    actualPrinterId = availablePrinter.id;
+                    console.log(`✅ Auto-assigned to printer ${actualPrinterId} (${availablePrinter.name})`);
+                } else {
+                    // No printer immediately available, assign to printer with least queue
+                    const queueCounts = await Promise.all([1, 2, 3].map(async id => {
+                        const count = await db.get(
+                            'SELECT COUNT(*) as count FROM print_queue WHERE printer_id = ? AND status IN ("queued", "printing")',
+                            [id]
+                        );
+                        return { id, count: count.count };
+                    }));
+                    
+                    const leastBusyPrinter = queueCounts.reduce((min, current) => 
+                        current.count < min.count ? current : min
+                    );
+                    
+                    actualPrinterId = leastBusyPrinter.id;
+                    console.log(`📋 No printer immediately available, assigned to least busy printer ${actualPrinterId} (queue: ${leastBusyPrinter.count})`);
+                }
+            } catch (error) {
+                console.error('Error auto-assigning printer:', error);
+                actualPrinterId = 1; // Fallback to printer 1
+                console.log('⚠️ Fallback to printer 1 due to error');
+            }
+        } else {
+            actualPrinterId = printerId || (printer === 'auto' ? 1 : parseInt(printer)) || 1;
         }
 
         if (actualPrinterId < 1 || actualPrinterId > 3) {
             return res.status(400).json({ error: 'Invalid printer ID' });
         }
-
-        const db = req.app.locals.db;
-        const octoprintService = req.app.locals.octoprintService;
 
         // Get the favorite file
         const favorite = await db.get(
