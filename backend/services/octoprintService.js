@@ -119,6 +119,8 @@ class OctoPrintService {
     // Upload file to printer
     async uploadFile(printerId, filePath, filename) {
         try {
+            console.log(`📤 Uploading file to printer ${printerId}:`, { filePath, filename });
+            
             const printer = this.getPrinter(printerId);
             if (!printer) {
                 throw new Error(`Printer ${printerId} not found`);
@@ -128,10 +130,26 @@ class OctoPrintService {
             const fs = require('fs');
             const FormData = require('form-data');
             
+            // Check if file exists
+            if (!fs.existsSync(filePath)) {
+                throw new Error(`File not found: ${filePath}`);
+            }
+            
+            // Check file extension
+            const path = require('path');
+            const ext = path.extname(filename).toLowerCase();
+            if (!['.gcode', '.g'].includes(ext)) {
+                throw new Error(`Invalid file type: ${ext}. Only .gcode and .g files are supported.`);
+            }
+            
+            console.log(`📁 File validated: ${filename} (${ext})`);
+            
             const form = new FormData();
             form.append('file', fs.createReadStream(filePath), filename);
             form.append('select', 'false');
             form.append('print', 'false');
+            
+            console.log(`🌐 Sending file to OctoPrint ${printer.name} at ${printer.apiUrl}`);
             
             const response = await client.post('/api/files/local', form, {
                 headers: {
@@ -140,9 +158,14 @@ class OctoPrintService {
                 }
             });
 
+            console.log(`✅ File uploaded successfully to ${printer.name}`);
             return response.data;
         } catch (error) {
-            console.error(`Error uploading file to printer ${printerId}:`, error.message);
+            console.error(`❌ Error uploading file to printer ${printerId}:`, {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+            });
             throw error;
         }
     }

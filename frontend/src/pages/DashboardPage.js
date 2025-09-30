@@ -294,7 +294,7 @@ const DashboardPage = () => {
                   <Button variant="outlined" fullWidth onClick={handleUploadClick} sx={{ mb: 1 }}>
                     {selectedFile ? selectedFile.name : 'Kies G-code bestand'}
                   </Button>
-                  <input type="file" accept=".bgcode,.gcode,.g" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
+                  <input type="file" accept=".gcode,.g" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
                   {selectedFile && (
                     <Typography variant="caption" color="text.secondary">{(selectedFile.size/1024/1024).toFixed(2)} MB</Typography>
                   )}

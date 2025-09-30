@@ -27,14 +27,18 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    // Allow .gcode, .bgcode, and .g files
-    const allowedTypes = ['.gcode', '.bgcode', '.g'];
+    // Allow .gcode and .g files (exclude .bgcode as it might not be supported by OctoPrint)
+    const allowedTypes = ['.gcode', '.g'];
     const ext = path.extname(file.originalname).toLowerCase();
     
+    console.log(`📁 File upload attempt: ${file.originalname}, extension: ${ext}`);
+    
     if (allowedTypes.includes(ext)) {
+        console.log(`✅ File type accepted: ${ext}`);
         cb(null, true);
     } else {
-        cb(new Error('Only .gcode files are allowed'), false);
+        console.log(`❌ File type rejected: ${ext}, allowed: ${allowedTypes.join(', ')}`);
+        cb(new Error(`Only G-code files (.gcode, .g) are allowed, got: ${ext}`), false);
     }
 };
 
@@ -110,6 +114,23 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        // Validate file type - only allow .gcode and .g files for printing
+        const allowedExtensions = ['.gcode', '.g'];
+        const fileExtension = path.extname(req.file.originalname).toLowerCase();
+        
+        if (!allowedExtensions.includes(fileExtension)) {
+            // Clean up uploaded file
+            try {
+                await fs.unlink(req.file.path);
+            } catch (unlinkError) {
+                console.error('Error cleaning up invalid file:', unlinkError);
+            }
+            
+            return res.status(400).json({ 
+                error: `Alleen G-code bestanden (.gcode, .g) zijn toegestaan voor printen. Je uploadde: ${fileExtension}` 
+            });
         }
 
         const db = req.app.locals.db;
