@@ -284,6 +284,36 @@ router.delete('/:id/files/:filename', requireAuth, requireVerifiedEmail, async (
     }
 });
 
+// Open printer settings (redirect to OctoPrint web interface)
+router.post('/:id/settings', requireAuth, requireVerifiedEmail, async (req, res) => {
+    try {
+        const printerId = parseInt(req.params.id);
+        if (isNaN(printerId) || printerId < 1 || printerId > 3) {
+            return res.status(400).json({ error: 'Invalid printer ID' });
+        }
+
+        const octoprintService = req.app.locals.octoprintService;
+        const printer = octoprintService.getPrinter(printerId);
+        
+        if (!printer) {
+            return res.status(404).json({ error: 'Printer not found' });
+        }
+
+        // Return the OctoPrint URL for the frontend to open
+        const octoprintUrl = printer.url.replace(':80', ''); // Remove port if it's 80
+        
+        res.json({ 
+            success: true, 
+            message: 'Settings URL generated',
+            url: octoprintUrl,
+            printerName: printer.name
+        });
+    } catch (error) {
+        console.error(`Error getting settings for printer ${req.params.id}:`, error);
+        res.status(500).json({ error: 'Failed to open printer settings' });
+    }
+});
+
 // Reload OctoPrint API keys (admin only)
 router.post('/reload-api-keys', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {

@@ -95,9 +95,17 @@ const PrintersPage = () => {
 
     const handlePrinterAction = async (printerId, action) => {
         try {
-            await axios.post(`/api/printers/${printerId}/${action}`);
-            // Refresh data after action
-            setTimeout(fetchPrinters, 1000);
+            if (action === 'settings') {
+                // Special handling for settings - open OctoPrint interface
+                const response = await axios.post(`/api/printers/${printerId}/${action}`);
+                if (response.data.success && response.data.url) {
+                    window.open(response.data.url, '_blank');
+                }
+            } else {
+                await axios.post(`/api/printers/${printerId}/${action}`);
+                // Refresh data after action
+                setTimeout(fetchPrinters, 1000);
+            }
         } catch (error) {
             console.error(`Error ${action}:`, error);
             setError(`Kon ${action} niet uitvoeren op printer`);

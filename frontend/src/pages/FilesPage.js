@@ -32,7 +32,8 @@ import {
     FavoriteBorder,
     Visibility,
     FileUpload,
-    Code
+    Code,
+    Warning
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import axios from 'axios';
@@ -44,6 +45,7 @@ const FilesPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [uploadDialog, setUploadDialog] = useState(false);
+    const [deleteDialog, setDeleteDialog] = useState({ open: false, fileId: null, fileName: '' });
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef();
@@ -108,17 +110,18 @@ const FilesPage = () => {
     };
 
     const handleDelete = async (fileId) => {
-        if (!window.confirm('Weet je zeker dat je dit bestand wilt verwijderen?')) {
-            return;
-        }
-
         try {
             await axios.delete(`/api/files/${fileId}`);
+            setDeleteDialog({ open: false, fileId: null, fileName: '' });
             fetchFiles(); // Refresh file list
         } catch (error) {
             console.error('Delete error:', error);
             setError('Kon bestand niet verwijderen');
         }
+    };
+
+    const openDeleteDialog = (fileId, fileName) => {
+        setDeleteDialog({ open: true, fileId, fileName });
     };
 
     const handleFavorite = async (fileId, isFavorite) => {
@@ -283,7 +286,7 @@ const FilesPage = () => {
                                                         <Download />
                                                     </IconButton>
                                                     <IconButton
-                                                        onClick={() => handleDelete(file.id)}
+                                                        onClick={() => openDeleteDialog(file.id, file.original_filename || file.filename)}
                                                         color="error"
                                                         title="Verwijder bestand"
                                                     >
@@ -348,6 +351,42 @@ const FilesPage = () => {
                         disabled={!selectedFile || uploading}
                     >
                         {uploading ? 'Uploaden...' : 'Upload'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog 
+                open={deleteDialog.open} 
+                onClose={() => setDeleteDialog({ open: false, fileId: null, fileName: '' })}
+                maxWidth="sm" 
+                fullWidth
+            >
+                <DialogTitle>
+                    <Box display="flex" alignItems="center">
+                        <Warning color="warning" sx={{ mr: 1 }} />
+                        Bestand Verwijderen
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Weet je zeker dat je het bestand <strong>"{deleteDialog.fileName}"</strong> permanent wilt verwijderen?
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Deze actie kan niet ongedaan worden gemaakt.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteDialog({ open: false, fileId: null, fileName: '' })}>
+                        Annuleren
+                    </Button>
+                    <Button 
+                        onClick={() => handleDelete(deleteDialog.fileId)} 
+                        variant="contained"
+                        color="error"
+                        startIcon={<Delete />}
+                    >
+                        Verwijderen
                     </Button>
                 </DialogActions>
             </Dialog>

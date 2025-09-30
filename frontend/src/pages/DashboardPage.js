@@ -247,34 +247,6 @@ const DashboardPage = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Card sx={{ 
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', 
-              color: 'white',
-              '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.3s' }
-            }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h6" fontWeight={600}>
-                      📺 Live Monitor
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Bekijk realtime printer status
-                    </Typography>
-                  </Box>
-                  <Button 
-                    variant="contained" 
-                    color="secondary" 
-                    onClick={() => window.open('/live-monitor', '_blank')}
-                    size="large"
-                  >
-                    Bekijken
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
         </Grid>
 
         {/* Upload/Print Form Section */}
@@ -411,11 +383,18 @@ const DashboardPage = () => {
                       </Box>
                     )}
 
-                    {printer.temperature?.bed && (
+                    {(printer.temperature?.bed || printer.temperature?.tool0) && (
                       <Box mt={2}>
-                        <Typography variant="caption" color="text.secondary">
-                          Bed: {Math.round(printer.temperature.bed.actual)}°C / {Math.round(printer.temperature.bed.target)}°C
-                        </Typography>
+                        {printer.temperature?.tool0 && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Hotend: {Math.round(printer.temperature.tool0.actual)}°C / {Math.round(printer.temperature.tool0.target)}°C
+                          </Typography>
+                        )}
+                        {printer.temperature?.bed && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Bed: {Math.round(printer.temperature.bed.actual)}°C / {Math.round(printer.temperature.bed.target)}°C
+                          </Typography>
+                        )}
                       </Box>
                     )}
                   </CardContent>

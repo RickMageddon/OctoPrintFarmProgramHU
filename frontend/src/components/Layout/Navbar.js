@@ -80,6 +80,7 @@ const Navbar = () => {
     { path: '/printers', label: 'Printers', icon: <Print /> },
     { path: '/files', label: 'Bestanden', icon: <CloudUpload /> },
     { path: '/queue', label: 'Wachtrij', icon: <Queue /> },
+    { path: '/live-monitor', label: 'Live Monitor', icon: <Settings />, external: true },
   ];
 
   return (
@@ -100,7 +101,7 @@ const Navbar = () => {
             <Button
               key={item.path}
               startIcon={item.icon}
-              onClick={() => navigate(item.path)}
+              onClick={() => item.external ? window.open(item.path, '_blank') : navigate(item.path)}
               sx={{
                 mx: 1,
                 color: isActive(item.path) ? 'primary.main' : 'inherit',

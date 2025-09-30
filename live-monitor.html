@@ -569,7 +569,79 @@
                 now.toLocaleDateString('nl-NL', options);
         }
 
-        // Simulate real-time printer progress
+        // Fetch real data from API
+        async function fetchLiveData() {
+            try {
+                const response = await fetch('/api/monitor/data');
+                const data = await response.json();
+                updateDisplayWithRealData(data);
+            } catch (error) {
+                console.error('Error fetching live data:', error);
+                // Keep using demo data on error
+            }
+        }
+
+        // Update display with real API data
+        function updateDisplayWithRealData(data) {
+            // Update printer statuses
+            data.printers.forEach((printer, index) => {
+                const printerIndex = index + 1;
+                const statusElement = document.querySelector(`.printer-card:nth-child(${printerIndex}) .printer-status`);
+                const hotendElement = document.querySelector(`.printer-card:nth-child(${printerIndex}) .detail-value`);
+                const bedElement = document.querySelector(`.printer-card:nth-child(${printerIndex}) .detail-item:nth-child(2) .detail-value`);
+                const progressElement = document.getElementById(`progress${printerIndex}`);
+                const progressTextElement = document.getElementById(`progressText${printerIndex}`);
+                const layerElement = document.getElementById(`layer${printerIndex}`);
+                const timeElement = document.getElementById(`time${printerIndex}`);
+                
+                if (statusElement) {
+                    statusElement.textContent = printer.status === 'operational' ? 'Beschikbaar' : 
+                                              printer.status === 'printing' ? 'Printing' :
+                                              printer.status === 'offline' ? 'Offline' : printer.status;
+                    statusElement.className = `printer-status status-${printer.status === 'operational' ? 'available' : printer.status}`;
+                }
+                
+                if (hotendElement) hotendElement.textContent = `${printer.hotend_temp}°C`;
+                if (bedElement) bedElement.textContent = `${printer.bed_temp}°C`;
+                
+                if (progressElement && printer.print_progress) {
+                    progressElement.style.width = `${printer.print_progress}%`;
+                }
+                
+                if (progressTextElement && printer.current_print_job) {
+                    progressTextElement.textContent = `${printer.print_progress}% - ${printer.current_print_job}`;
+                }
+                
+                if (timeElement && printer.estimated_time_remaining) {
+                    const hours = Math.floor(printer.estimated_time_remaining / 60);
+                    const minutes = printer.estimated_time_remaining % 60;
+                    timeElement.textContent = `${hours}u ${minutes}m`;
+                }
+            });
+
+            // Update statistics
+            if (data.stats) {
+                const totalPrintsElement = document.getElementById('totalPrints');
+                const queueLengthElement = document.getElementById('queueLength');
+                
+                if (totalPrintsElement) totalPrintsElement.textContent = data.stats.total_prints_month || 0;
+                if (queueLengthElement) queueLengthElement.textContent = data.stats.queue_length || 0;
+                
+                // Update active printers
+                const activePrintersElement = document.querySelector('.stat-item:nth-child(2) .stat-number');
+                if (activePrintersElement) {
+                    activePrintersElement.textContent = `${data.stats.active_printers}/${data.stats.total_printers}`;
+                }
+                
+                // Update success rate
+                const successRateElement = document.querySelector('.stat-item:nth-child(4) .stat-number');
+                if (successRateElement) {
+                    successRateElement.textContent = `${data.stats.success_rate}%`;
+                }
+            }
+        }
+
+        // Simulate real-time printer progress (fallback for demo)
         function updatePrinterProgress() {
             const progress1 = document.getElementById('progress1');
             const progressText1 = document.getElementById('progressText1');
@@ -611,11 +683,13 @@
 
         // Initialize
         updateTimestamp();
+        fetchLiveData(); // Initial data fetch
         
         // Set intervals for real-time updates
         setInterval(updateTimestamp, 1000); // Update every second
-        setInterval(updatePrinterProgress, 3000); // Update progress every 3 seconds
-        setInterval(updateQueue, 30000); // Update queue every 30 seconds
+        setInterval(fetchLiveData, 30000); // Fetch real data every 30 seconds
+        setInterval(updatePrinterProgress, 3000); // Update progress every 3 seconds (fallback)
+        setInterval(updateQueue, 30000); // Update queue every 30 seconds (fallback)
 
         // Add some dynamic visual effects
         setInterval(() => {

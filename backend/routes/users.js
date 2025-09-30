@@ -207,8 +207,11 @@ router.put('/profile', requireAuth, async (req, res) => {
     }
 });
 
-// Upload avatar
-router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) => {
+// Upload avatar - Check auth before multer
+router.post('/avatar', requireAuth, (req, res, next) => {
+    console.log('🔐 Pre-upload auth check passed, proceeding with multer');
+    upload.single('avatar')(req, res, next);
+}, async (req, res) => {
     console.log('🖼️ Avatar upload request received');
     console.log('👤 User ID:', req.user?.id);
     console.log('📁 File info:', req.file ? {
