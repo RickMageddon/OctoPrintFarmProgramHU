@@ -984,6 +984,16 @@ router.post('/logout', (req, res) => {
 
 // Check authentication status
 router.get('/status', (req, res) => {
+    console.log('🔍 Auth status check:', {
+        isAuthenticated: req.isAuthenticated(),
+        hasUser: !!req.user,
+        hasSession: !!req.session,
+        sessionUser: req.session?.user ? req.session.user.email : 'none',
+        userEmail: req.user ? req.user.email : 'none',
+        sessionId: req.sessionID,
+        cookies: req.headers.cookie ? 'present' : 'missing'
+    });
+    
     res.json({ 
         authenticated: req.isAuthenticated(),
         user: req.isAuthenticated() ? {

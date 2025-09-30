@@ -247,6 +247,25 @@ const DashboardPage = () => {
               </CardContent>
             </Card>
           </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{
+              background: 'linear-gradient(135deg, #f8ffae 0%, #43c6ac 100%)',
+              color: 'primary.main',
+              minHeight: 120,
+              display: 'flex',
+              alignItems: 'center',
+              boxShadow: 3
+            }}>
+              <CardContent>
+                <Typography variant="h5" fontWeight={700} gutterBottom>
+                  Welkom terug, {user?.username || user?.email || 'Gebruiker'}!
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Hier is een overzicht van Printmeister.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
         {/* Upload/Print Form Section */}
@@ -319,9 +338,7 @@ const DashboardPage = () => {
             </Box>
           </Paper>
         )}
-        <Typography variant="body1" color="text.secondary" mb={4}>
-          Welkom terug, {user.username}! Hier is een overzicht van Printmeister.
-        </Typography>
+
 
         {/* Printer Status */}
         <Typography variant="h5" gutterBottom sx={{ mt: 4, mb: 2 }}>

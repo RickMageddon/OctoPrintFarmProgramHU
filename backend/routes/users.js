@@ -39,11 +39,25 @@ const upload = multer({
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
-    console.log('🔐 User route auth check:', {
+    console.log('🔐 Detailed User route auth check:', {
         isAuthenticated: req.isAuthenticated(),
         hasSessionUser: !!req.session.user,
         passportUser: req.user ? req.user.email : 'none',
-        sessionUser: req.session.user ? req.session.user.email : 'none'
+        sessionUser: req.session.user ? req.session.user.email : 'none',
+        sessionId: req.sessionID,
+        cookies: req.headers.cookie,
+        userAgent: req.headers['user-agent'],
+        url: req.url,
+        method: req.method,
+        sessionData: req.session ? {
+            id: req.session.id,
+            passport: req.session.passport,
+            user: req.session.user ? {
+                id: req.session.user.id,
+                email: req.session.user.email,
+                username: req.session.user.username
+            } : null
+        } : 'No session'
     });
     
     // Check both Passport authentication and session user
@@ -51,11 +65,18 @@ const requireAuth = (req, res, next) => {
         // Ensure req.user is set for consistency
         if (!req.user && req.session.user) {
             req.user = req.session.user;
+            console.log('✅ Set req.user from session:', req.user.email);
         }
         return next();
     }
     
-    console.log('❌ User route authentication failed');
+    console.log('❌ User route authentication failed - detailed analysis:', {
+        hasReqUser: !!req.user,
+        hasSessionUser: !!req.session?.user,
+        isAuthenticated: req.isAuthenticated(),
+        sessionExists: !!req.session,
+        sessionKeys: req.session ? Object.keys(req.session) : 'no session'
+    });
     res.status(401).json({ error: 'Authentication required' });
 };
 
@@ -208,17 +229,44 @@ router.put('/profile', requireAuth, async (req, res) => {
 });
 
 // Upload avatar - Check auth before multer
-router.post('/avatar', requireAuth, (req, res, next) => {
+router.post('/avatar', (req, res, next) => {
+    console.log('🖼️ Avatar upload request initiated');
+    console.log('📊 Request details:', {
+        method: req.method,
+        url: req.url,
+        headers: {
+            contentType: req.headers['content-type'],
+            contentLength: req.headers['content-length'],
+            userAgent: req.headers['user-agent'],
+            cookie: req.headers.cookie ? 'present' : 'missing'
+        },
+        sessionId: req.sessionID,
+        hasSession: !!req.session
+    });
+    next();
+}, requireAuth, (req, res, next) => {
     console.log('🔐 Pre-upload auth check passed, proceeding with multer');
+    console.log('👤 User authenticated:', {
+        id: req.user.id,
+        email: req.user.email,
+        username: req.user.username
+    });
     upload.single('avatar')(req, res, next);
 }, async (req, res) => {
-    console.log('🖼️ Avatar upload request received');
-    console.log('👤 User ID:', req.user?.id);
-    console.log('📁 File info:', req.file ? {
+    console.log('🖼️ Avatar upload request received in final handler');
+    console.log('👤 User ID in handler:', req.user?.id);
+    console.log('� User object in handler:', req.user);
+    console.log('�📁 File info:', req.file ? {
         filename: req.file.filename,
         size: req.file.size,
-        mimetype: req.file.mimetype
+        mimetype: req.file.mimetype,
+        path: req.file.path
     } : 'No file');
+    console.log('🔧 Request headers:', {
+        contentType: req.headers['content-type'],
+        authorization: req.headers.authorization,
+        cookie: req.headers.cookie ? 'present' : 'missing'
+    });
 
     try {
         if (!req.file) {
