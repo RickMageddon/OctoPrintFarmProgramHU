@@ -72,7 +72,7 @@ const DashboardPage = () => {
       const fileId = uploadRes.data.fileId || uploadRes.data.id;
       // 2. Voeg toe aan queue
       const queueRes = await axios.post('/api/queue/add', {
-        fileId,
+        favoriteId: fileId, // Use favoriteId instead of fileId to match backend expectation
         printer,
         priority,
         filamentChange,
