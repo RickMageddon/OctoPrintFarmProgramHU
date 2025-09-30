@@ -81,7 +81,7 @@ const ProfilePage = () => {
                 const [profileRes, statsRes, historyRes] = await Promise.all([
                     axios.get('/api/users/profile'),
                     axios.get('/api/users/stats'),
-                    axios.get('/api/users/history')
+                    axios.get('/api/users/history?limit=4') // Limit to 4 recent prints
                 ]);
                 
                 setProfile(profileRes.data);

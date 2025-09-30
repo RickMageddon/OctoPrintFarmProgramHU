@@ -258,7 +258,21 @@ router.post('/avatar', (req, res, next) => {
         email: req.user.email,
         username: req.user.username
     });
-    upload.single('avatar')(req, res, next);
+    
+    // Add multer error handling
+    upload.single('avatar')(req, res, (err) => {
+        if (err) {
+            console.error('❌ Multer error:', err);
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ error: 'Bestand te groot (max 2MB)' });
+            } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+                return res.status(400).json({ error: 'Ongeldig bestandsveld' });
+            } else {
+                return res.status(400).json({ error: 'Upload fout: ' + err.message });
+            }
+        }
+        next();
+    });
 }, async (req, res) => {
     console.log('🖼️ Avatar upload request received in final handler');
     console.log('👤 User ID in handler:', req.user?.id);

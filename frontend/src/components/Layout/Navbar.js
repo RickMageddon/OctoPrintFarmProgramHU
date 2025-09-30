@@ -146,19 +146,25 @@ const Navbar = () => {
           sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', ml: 2 }}
           onClick={() => navigate('/profile')}
         >
-          <Badge
-            badgeContent={!user?.study_direction ? <Warning sx={{ fontSize: 16 }} /> : null}
-            color="warning"
-            overlap="circular"
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-          >
+          {!user?.study_direction ? (
+            <Badge
+              badgeContent={<Warning sx={{ fontSize: 16 }} />}
+              color="warning"
+              overlap="circular"
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+            >
+              <Avatar sx={{ width: 32, height: 32 }}>
+                {user?.username?.charAt(0).toUpperCase()}
+              </Avatar>
+            </Badge>
+          ) : (
             <Avatar sx={{ width: 32, height: 32 }}>
               {user?.username?.charAt(0).toUpperCase()}
             </Avatar>
-          </Badge>
+          )}
         </Box>
 
         <Menu
