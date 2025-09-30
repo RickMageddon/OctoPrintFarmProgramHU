@@ -419,4 +419,23 @@ router.patch('/:id/priority', requireAuth, requireVerifiedEmail, async (req, res
     }
 });
 
+// Trigger queue processing manually (for debugging)
+router.post('/process', requireAuth, async (req, res) => {
+    try {
+        if (!req.user.is_admin) {
+            return res.status(403).json({ error: 'Admin privileges required' });
+        }
+
+        const octoprintService = req.app.locals.octoprintService;
+        console.log('🔧 Manually triggering queue processing...');
+        
+        await octoprintService.processQueue();
+        
+        res.json({ success: true, message: 'Queue processing triggered' });
+    } catch (error) {
+        console.error('Error manually processing queue:', error);
+        res.status(500).json({ error: 'Failed to process queue' });
+    }
+});
+
 module.exports = router;

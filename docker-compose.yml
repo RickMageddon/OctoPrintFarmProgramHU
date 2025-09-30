@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # OctoPrint Instance 1 - Prusa Printer 1
   octoprint1:

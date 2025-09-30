@@ -1163,4 +1163,40 @@ router.get('/debug/email-test', async (req, res) => {
     }
 });
 
+// Debug database info (admin only)
+router.get('/debug/database', requireAuth, async (req, res) => {
+    try {
+        if (!req.user.is_admin) {
+            return res.status(403).json({ error: 'Admin privileges required' });
+        }
+
+        const db = req.app.locals.db;
+        
+        // Get table info
+        const tables = await db.all("SELECT name FROM sqlite_master WHERE type='table'");
+        
+        // Get user count
+        const userCount = await db.get("SELECT COUNT(*) as count FROM users");
+        
+        // Get queue count
+        const queueCount = await db.get("SELECT COUNT(*) as count FROM print_queue");
+        
+        // Get favorites count
+        const favoritesCount = await db.get("SELECT COUNT(*) as count FROM user_favorites");
+        
+        res.json({
+            database_path: process.env.DATABASE_PATH,
+            tables: tables.map(t => t.name),
+            counts: {
+                users: userCount.count,
+                queue_items: queueCount.count,
+                favorites: favoritesCount.count
+            }
+        });
+    } catch (error) {
+        console.error('Database debug error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

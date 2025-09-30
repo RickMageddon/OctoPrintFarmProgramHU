@@ -138,7 +138,7 @@ const FilesPage = () => {
     const handlePrint = async (fileId) => {
         try {
             await axios.post('/api/queue/add', {
-                fileId,
+                favoriteId: fileId, // Use favoriteId instead of fileId to match backend expectation
                 priority: 'normal'
             });
             alert('Bestand toegevoegd aan print wachtrij!');

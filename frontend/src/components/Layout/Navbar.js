@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -25,14 +25,38 @@ import {
   Warning,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSocket } from '../../contexts/SocketContext';
+import axios from 'axios';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { isConnected } = useSocket();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [printersOnline, setPrintersOnline] = useState(0);
+  const [totalPrinters] = useState(3);
+
+  // Fetch printer statuses
+  useEffect(() => {
+    const fetchPrinterStatus = async () => {
+      try {
+        const response = await axios.get('/api/printers/status');
+        const onlineCount = response.data.filter(printer => 
+          printer.state?.text && printer.state.text !== 'Offline'
+        ).length;
+        setPrintersOnline(onlineCount);
+      } catch (error) {
+        console.error('Error fetching printer status:', error);
+        setPrintersOnline(0);
+      }
+    };
+
+    if (user) {
+      fetchPrinterStatus();
+      // Poll every 30 seconds
+      const interval = setInterval(fetchPrinterStatus, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -93,10 +117,10 @@ const Navbar = () => {
 
         <Box sx={{ flexGrow: 1 }} />
 
-        {/* Connection Status */}
+        {/* Printer Status */}
         <Chip
-          label={isConnected ? 'Online' : 'Offline'}
-          color={isConnected ? 'success' : 'error'}
+          label={`Printers: ${printersOnline}/${totalPrinters} Online`}
+          color={printersOnline > 0 ? 'success' : 'error'}
           size="small"
           sx={{ mr: 2 }}
         />
