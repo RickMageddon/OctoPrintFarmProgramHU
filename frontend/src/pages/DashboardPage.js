@@ -228,9 +228,9 @@ const DashboardPage = () => {
               alignItems: 'center',
               '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.3s' }
             }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
+              <CardContent sx={{ width: '100%' }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
+                  <Box flex={1}>
                     <Typography variant="h6" fontWeight={600}>
                       🚀 Snel Printen
                     </Typography>
@@ -238,14 +238,16 @@ const DashboardPage = () => {
                       Upload direct een bestand en start printen
                     </Typography>
                   </Box>
-                  <Button 
-                    variant="contained" 
-                    color="secondary" 
-                    onClick={() => setShowUploadForm(v => !v)}
-                    size="large"
-                  >
-                    {showUploadForm ? 'Sluiten' : 'Upload'}
-                  </Button>
+                  <Box ml={3}>
+                    <Button 
+                      variant="contained" 
+                      color="secondary" 
+                      onClick={() => setShowUploadForm(v => !v)}
+                      size="large"
+                    >
+                      {showUploadForm ? 'Sluiten' : 'Upload'}
+                    </Button>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>
