@@ -43,6 +43,7 @@ class Database {
                 is_admin BOOLEAN DEFAULT FALSE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 last_login DATETIME,
+                avatar_url TEXT,
                 first_login_completed BOOLEAN DEFAULT FALSE -- For study direction selection
             )`,
 
