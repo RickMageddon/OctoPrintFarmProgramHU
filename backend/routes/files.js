@@ -27,18 +27,16 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    // Allow .gcode and .g files (exclude .bgcode as it might not be supported by OctoPrint)
-    const allowedTypes = ['.gcode', '.g'];
+    // Allow .gcode, .g, and .bgcode files (for Prusa BGCODE support)
+    const allowedTypes = ['.gcode', '.g', '.bgcode'];
     const ext = path.extname(file.originalname).toLowerCase();
-    
     console.log(`📁 File upload attempt: ${file.originalname}, extension: ${ext}`);
-    
     if (allowedTypes.includes(ext)) {
         console.log(`✅ File type accepted: ${ext}`);
         cb(null, true);
     } else {
         console.log(`❌ File type rejected: ${ext}, allowed: ${allowedTypes.join(', ')}`);
-        cb(new Error(`Only G-code files (.gcode, .g) are allowed, got: ${ext}`), false);
+        cb(new Error(`Only G-code files (.gcode, .g, .bgcode) are allowed, got: ${ext}`), false);
     }
 };
 
@@ -116,10 +114,9 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // Validate file type - only allow .gcode and .g files for printing
-        const allowedExtensions = ['.gcode', '.g'];
+        // Validate file type - only allow .gcode, .g, and .bgcode files for printing
+        const allowedExtensions = ['.gcode', '.g', '.bgcode'];
         const fileExtension = path.extname(req.file.originalname).toLowerCase();
-        
         if (!allowedExtensions.includes(fileExtension)) {
             // Clean up uploaded file
             try {
@@ -127,9 +124,8 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
             } catch (unlinkError) {
                 console.error('Error cleaning up invalid file:', unlinkError);
             }
-            
             return res.status(400).json({ 
-                error: `Alleen G-code bestanden (.gcode, .g) zijn toegestaan voor printen. Je uploadde: ${fileExtension}` 
+                error: `Alleen G-code bestanden (.gcode, .g, .bgcode) zijn toegestaan voor printen. Je uploadde: ${fileExtension}` 
             });
         }
 
