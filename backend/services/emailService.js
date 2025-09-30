@@ -18,39 +18,19 @@ class EmailService {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'Printmeister - Email Verificatie',
+                subject: 'Verificatiecode',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #2c3e50;">Printmeister - Email Verificatie</h2>
-                        
-                        <p>Hallo <strong>${username}</strong>,</p>
-                        
-                        <p>Bedankt voor het registreren bij Printmeister. Om je account te activeren, 
-                        hebben we een verificatiecode naar je HU email adres gestuurd.</p>
-                        
+                        <p>Hallo,</p>
+                        <p>Gebruik onderstaande code om je account te verifiëren:</p>
                         <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: center;">
-                            <h3 style="margin: 0; color: #2c3e50;">Je verificatiecode is:</h3>
                             <div style="font-size: 32px; font-weight: bold; color: #e74c3c; margin: 10px 0; letter-spacing: 5px;">
                                 ${verificationCode}
                             </div>
                             <p style="margin: 0; color: #7f8c8d; font-size: 14px;">
-                                Deze code is 10 minuten geldig.
+                                Geldig voor 10 minuten.
                             </p>
                         </div>
-                        
-                        <p>Voer deze code in op de verificatiepagina om je account te activeren.</p>
-                        
-                        <p style="color: #7f8c8d; font-size: 14px;">
-                            Als je dit account niet hebt aangemaakt, kun je deze email negeren.
-                        </p>
-                        
-                        <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
-                        
-                        <p style="color: #7f8c8d; font-size: 12px;">
-                            Printmeister<br>
-                            Hogeschool Utrecht<br>
-                            Dit is een automatisch gegenereerde email.
-                        </p>
                     </div>
                 `
             };
@@ -68,32 +48,15 @@ class EmailService {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'Printmeister - Print Voltooid',
+                subject: 'Print voltooid',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #27ae60;">🎉 Print Voltooid!</h2>
-                        
-                        <p>Hallo <strong>${username}</strong>,</p>
-                        
-                        <p>Goed nieuws! Je print is succesvol voltooid.</p>
-                        
+                        <p>Hallo,</p>
+                        <p>Je print is voltooid en kan opgehaald worden.</p>
                         <div style="background-color: #e8f5e8; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #27ae60;">
-                            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Print Details:</h3>
                             <p style="margin: 5px 0;"><strong>Bestand:</strong> ${filename}</p>
                             <p style="margin: 5px 0;"><strong>Printer:</strong> ${printerName}</p>
-                            <p style="margin: 5px 0;"><strong>Voltooid op:</strong> ${new Date().toLocaleString('nl-NL')}</p>
                         </div>
-                        
-                        <p>Je kunt je print nu ophalen bij de ${printerName}.</p>
-                        
-                        <p><a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Ga naar Dashboard</a></p>
-                        
-                        <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
-                        
-                        <p style="color: #7f8c8d; font-size: 12px;">
-                            Printmeister<br>
-                            Hogeschool Utrecht
-                        </p>
                     </div>
                 `
             };
@@ -110,33 +73,16 @@ class EmailService {
             const mailOptions = {
                 from: process.env.EMAIL_USER,
                 to: email,
-                subject: 'Printmeister - Print Mislukt',
+                subject: 'Print mislukt',
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #e74c3c;">⚠️ Print Mislukt</h2>
-                        
-                        <p>Hallo <strong>${username}</strong>,</p>
-                        
-                        <p>Helaas is je print mislukt. Hier zijn de details:</p>
-                        
+                        <p>Hallo,</p>
+                        <p>Je print is mislukt. Probeer het opnieuw of neem contact op voor hulp.</p>
                         <div style="background-color: #fdf2f2; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #e74c3c;">
-                            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Print Details:</h3>
                             <p style="margin: 5px 0;"><strong>Bestand:</strong> ${filename}</p>
                             <p style="margin: 5px 0;"><strong>Printer:</strong> ${printerName}</p>
-                            <p style="margin: 5px 0;"><strong>Mislukt op:</strong> ${new Date().toLocaleString('nl-NL')}</p>
                             <p style="margin: 5px 0;"><strong>Reden:</strong> ${reason}</p>
                         </div>
-                        
-                        <p>Je kunt proberen je bestand opnieuw toe te voegen aan de wachtrij, of contact opnemen met de beheerders voor hulp.</p>
-                        
-                        <p><a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Ga naar Dashboard</a></p>
-                        
-                        <hr style="border: none; border-top: 1px solid #ecf0f1; margin: 30px 0;">
-                        
-                        <p style="color: #7f8c8d; font-size: 12px;">
-                            Printmeister<br>
-                            Hogeschool Utrecht
-                        </p>
                     </div>
                 `
             };

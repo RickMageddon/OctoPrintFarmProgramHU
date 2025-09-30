@@ -223,6 +223,9 @@ const DashboardPage = () => {
             <Card sx={{ 
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
               color: 'white',
+              minHeight: 120,
+              display: 'flex',
+              alignItems: 'center',
               '&:hover': { transform: 'translateY(-2px)', transition: 'transform 0.3s' }
             }}>
               <CardContent>

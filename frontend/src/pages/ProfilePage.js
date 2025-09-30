@@ -566,7 +566,7 @@ const ProfilePage = () => {
                             label="E-mail"
                             type="email"
                             value={editForm.email || ''}
-                            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                            disabled
                         />
                     </Box>
                 </DialogContent>
