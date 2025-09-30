@@ -65,10 +65,13 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
+    name: 'printmeister.sid', // Custom session name
     cookie: {
         // Use explicit override if provided, else default to production
         secure: (process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : process.env.NODE_ENV === 'production'),
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        httpOnly: true, // Prevent XSS
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax' // Help with CORS issues
     }
 }));
 
