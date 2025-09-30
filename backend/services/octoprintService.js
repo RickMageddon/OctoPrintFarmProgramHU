@@ -138,8 +138,8 @@ class OctoPrintService {
             // Check file extension
             const path = require('path');
             const ext = path.extname(filename).toLowerCase();
-            if (!['.gcode', '.g'].includes(ext)) {
-                throw new Error(`Invalid file type: ${ext}. Only .gcode and .g files are supported.`);
+            if (!['.gcode', '.g', '.bgcode'].includes(ext)) {
+                throw new Error(`Invalid file type: ${ext}. Only .gcode, .g, and .bgcode files are supported.`);
             }
             
             console.log(`📁 File validated: ${filename} (${ext})`);
