@@ -4,12 +4,29 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.resolve(__dirname, '..', '..', 'database', 'database.db');
+// Check multiple possible database locations
+const possiblePaths = [
+  path.resolve(__dirname, '..', '..', 'database', 'database.db'),
+  path.resolve(__dirname, '..', 'database', 'database.db'),
+  '/app/database/database.db',
+  process.env.DATABASE_PATH
+].filter(Boolean);
 
-if (!fs.existsSync(dbPath)) {
-  console.error('❌ Database not found at', dbPath);
+let dbPath = null;
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    dbPath = p;
+    break;
+  }
+}
+
+if (!dbPath) {
+  console.error('❌ Database not found. Tried paths:');
+  possiblePaths.forEach(p => console.error('  -', p));
   process.exit(1);
 }
+
+console.log('📂 Using database at:', dbPath);
 
 console.log('👤 Adding test user account...');
 
