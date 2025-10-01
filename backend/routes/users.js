@@ -332,11 +332,13 @@ router.post('/avatar', (req, res, next) => {
         console.log('🔄 Session updated');
 
         console.log('✅ Avatar upload successful');
-        res.json({
+        const responseData = {
             success: true,
             message: 'Profielfoto bijgewerkt',
             avatar_url: avatarUrl
-        });
+        };
+        console.log('📤 Sending response:', responseData);
+        res.json(responseData);
 
     } catch (error) {
         console.error('💥 Error uploading avatar:', error);

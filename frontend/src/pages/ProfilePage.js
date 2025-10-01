@@ -192,14 +192,24 @@ const ProfilePage = () => {
                 formData.append('avatar', avatarFile);
                 
                 try {
+                    console.log('[AVATAR] Uploading avatar...');
                     const response = await axios.post('/api/users/avatar', formData, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                     
-                    // Update profile with new avatar URL
-                    setProfile({ ...profile, ...editForm, avatar_url: response.data.avatar_url });
+                    console.log('[AVATAR] Upload response:', response.data);
+                    
+                    // Update profile with new avatar URL and refresh from server
+                    const newAvatarUrl = response.data.avatar_url;
+                    setProfile(prev => ({ ...prev, ...editForm, avatar_url: newAvatarUrl }));
+                    
+                    // Force refresh profile data to ensure consistency
+                    await fetchProfile();
+                    
+                    console.log('[AVATAR] Avatar updated successfully');
                 } catch (avatarError) {
                     console.error('Error uploading avatar:', avatarError);
+                    console.error('Avatar error response:', avatarError.response?.data);
                     
                     // Handle specific error codes
                     if (avatarError.response?.status === 413) {
@@ -219,9 +229,11 @@ const ProfilePage = () => {
             
             setEditDialog(false);
             
-            // Clean up preview URL
+            // Clean up avatar file and preview URL after successful save
+            setAvatarFile(null);
             if (avatarPreview) {
                 URL.revokeObjectURL(avatarPreview);
+                setAvatarPreview(null);
             }
         } catch (error) {
             console.error('Error updating profile:', error);
