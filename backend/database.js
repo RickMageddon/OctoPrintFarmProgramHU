@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 class Database {
-    constructor(dbPath = './database/farm.db') {
+    constructor(dbPath = './database/database.db') {
         this.dbPath = dbPath;
         this.db = null;
     }
@@ -136,19 +136,6 @@ class Database {
                 [printer.id, printer.name, printer.url]
             );
         }
-    }
-
-    async run(sql, params = []) {
-        return new Promise((resolve, reject) => {
-            this.db.run(sql, params, function(err) {
-                if (err) {
-                    console.error('Database error:', err.message);
-                    reject(err);
-                } else {
-                    resolve({ id: this.lastID, changes: this.changes });
-                }
-            });
-        });
     }
 
     async get(sql, params = []) {

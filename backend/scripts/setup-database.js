@@ -5,7 +5,7 @@ async function setupDatabase() {
     console.log('🗄️  Setting up Printmeister Database...');
     
     try {
-        const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database/farm.db');
+    const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../database/database.db');
         const db = new Database(dbPath);
         
         console.log('📡 Connecting to database...');
