@@ -33,6 +33,7 @@ router.get('/', (req, res) => {
 
 // API endpoint for live monitor data
 router.get('/data', async (req, res) => {
+    console.log('[MONITOR] API endpoint called - fetching live monitor data...');
     try {
         const db = req.app.locals.db;
         const octoprintService = req.app.locals.octoprintService;
@@ -67,6 +68,11 @@ router.get('/data', async (req, res) => {
         let queue = [];
         try {
             console.log('[MONITOR] Fetching queue data from database...');
+            
+            // First, let's see what's actually in the print_queue table
+            const allQueueItems = await db.all('SELECT * FROM print_queue ORDER BY created_at DESC LIMIT 5');
+            console.log('[MONITOR] All queue items (last 5):', allQueueItems);
+            
             queue = await db.all(`
                 SELECT 
                     q.id,
@@ -90,6 +96,7 @@ router.get('/data', async (req, res) => {
                 LIMIT 10
             `);
             console.log('[MONITOR] Got queue data:', queue.length, 'items');
+            console.log('[MONITOR] Queue items:', queue);
         } catch (queueError) {
             console.warn('[MONITOR] Failed to get queue data:', queueError.message);
             queue = [];
