@@ -330,6 +330,24 @@ async function startServer() {
         await db.connect();
         console.log('✅ Database connected successfully');
         
+        // Clear print queue on startup to ensure fresh start
+        console.log('🧹 Clearing print queue on startup...');
+        try {
+            const result = await db.run(`
+                UPDATE print_queue 
+                SET status = 'cancelled', completed_at = CURRENT_TIMESTAMP 
+                WHERE status IN ('queued', 'printing')
+            `);
+            if (result.changes > 0) {
+                console.log(`✅ Cleared ${result.changes} jobs from print queue`);
+            } else {
+                console.log('✅ No jobs to clear from print queue');
+            }
+        } catch (clearError) {
+            console.error('⚠️ Error clearing print queue:', clearError);
+            // Continue startup even if clearing fails
+        }
+        
         server.listen(PORT, () => {
             console.log(`🚀 OctoPrint Farm Backend running on port ${PORT}`);
             console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
