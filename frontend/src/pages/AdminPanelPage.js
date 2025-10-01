@@ -83,19 +83,19 @@ const AdminPanelPage = () => {
     setSnackbar({ open: true, message: 'Gebruiker opgeslagen' });
   };
   const handleResetGithub = async (user) => {
-    if (!confirm(`Reset GitHub koppeling voor ${user.username}?`)) return;
+    if (!window.confirm(`Reset GitHub koppeling voor ${user.username}?`)) return;
     await axios.post(`/api/users/${user.id}/reset-github`);
     fetchUsers();
     setSnackbar({ open: true, message: 'GitHub login gereset' });
   };
   const handlePauseUser = async (user) => {
-    if (!confirm(`Pauzeer account ${user.username}?`)) return;
+    if (!window.confirm(`Pauzeer account ${user.username}?`)) return;
     await axios.post(`/api/users/${user.id}/pause`);
     fetchUsers();
     setSnackbar({ open: true, message: 'Account gepauzeerd' });
   };
   const handleBlockUser = async (user) => {
-    if (!confirm(`Blokkeer account ${user.username}?`)) return;
+    if (!window.confirm(`Blokkeer account ${user.username}?`)) return;
     await axios.post(`/api/users/${user.id}/block`);
     fetchUsers();
     setSnackbar({ open: true, message: 'Account geblokkeerd' });
@@ -108,7 +108,7 @@ const AdminPanelPage = () => {
 
   // Queue actions
   const handleDeleteQueue = async (job) => {
-    if (!confirm(`Verwijder job ${job.filename} van ${job.username}?`)) return;
+    if (!window.confirm(`Verwijder job ${job.filename} van ${job.username}?`)) return;
     await axios.delete(`/api/queue/${job.id}`);
     fetchQueue();
     setSnackbar({ open: true, message: 'Printjob verwijderd' });
@@ -120,7 +120,7 @@ const AdminPanelPage = () => {
 
   // Printer actions
   const handleSetMaintenance = async (printer, maintenance) => {
-    if (!confirm(`${maintenance ? 'Zet' : 'Haal'} ${printer.name} ${maintenance ? 'op' : 'van'} onderhoud?`)) return;
+    if (!window.confirm(`${maintenance ? 'Zet' : 'Haal'} ${printer.name} ${maintenance ? 'op' : 'van'} onderhoud?`)) return;
     await axios.post(`/api/printers/${printer.id}/maintenance`, { maintenance });
     fetchPrinters();
     setSnackbar({ open: true, message: maintenance ? 'Printer op onderhoud' : 'Printer weer beschikbaar' });
