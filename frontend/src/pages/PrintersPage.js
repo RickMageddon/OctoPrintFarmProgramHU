@@ -205,12 +205,30 @@ const PrintersPage = () => {
                                                         </IconButton>
                                                     )}
                                                     {printer.state?.text === 'Printing' && (
+                                                        <>
+                                                            <IconButton
+                                                                onClick={() => handlePrinterAction(printer.id, 'pause')}
+                                                                color="warning"
+                                                                title="Pauzeer print"
+                                                            >
+                                                                <Pause />
+                                                            </IconButton>
+                                                            <IconButton
+                                                                onClick={() => handlePrinterAction(printer.id, 'cancel')}
+                                                                color="error"
+                                                                title="Stop print"
+                                                            >
+                                                                <Stop />
+                                                            </IconButton>
+                                                        </>
+                                                    )}
+                                                    {printer.state?.text === 'Paused' && (
                                                         <IconButton
-                                                            onClick={() => handlePrinterAction(printer.id, 'pause')}
-                                                            color="warning"
-                                                            title="Pauzeer print"
+                                                            onClick={() => handlePrinterAction(printer.id, 'resume')}
+                                                            color="success"
+                                                            title="Hervat print"
                                                         >
-                                                            <Pause />
+                                                            <PlayArrow />
                                                         </IconButton>
                                                     )}
                                                     <IconButton

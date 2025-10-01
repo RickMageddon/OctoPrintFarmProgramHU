@@ -304,7 +304,7 @@ class OctoPrintService {
             
             for (const printer of this.printers) {
                 const status = await this.getPrinterStatus(printer.id);
-                
+                // Update printer_status table
                 await this.db.run(
                     `UPDATE printer_status SET 
                      status = ?, 
@@ -312,6 +312,25 @@ class OctoPrintService {
                      WHERE id = ?`,
                     [status.state?.text || 'Unknown', printer.id]
                 );
+
+                // Mark print_queue as completed if print is done
+                if (
+                    status.state?.text === 'Operational' &&
+                    (!status.job?.job?.file?.name || status.job?.state === 'Operational')
+                ) {
+                    // Zoek de print_queue entry die nog op 'printing' staat voor deze printer
+                    const activeJob = await this.db.get(
+                        `SELECT * FROM print_queue WHERE printer_id = ? AND status = 'printing' ORDER BY started_at DESC LIMIT 1`,
+                        [printer.id]
+                    );
+                    if (activeJob) {
+                        await this.db.run(
+                            `UPDATE print_queue SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                            [activeJob.id]
+                        );
+                        console.log(`✅ Printjob ${activeJob.id} op printer ${printer.id} gemarkeerd als completed.`);
+                    }
+                }
             }
         } catch (error) {
             console.error('Error updating printer status in database:', error);
