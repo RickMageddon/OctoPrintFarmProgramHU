@@ -347,6 +347,9 @@ class OctoPrintService {
                 return;
             }
             
+            // First, sync print queue status with actual printer status
+            await this.syncQueueWithPrinterStatus();
+            
             // Get next queued job
             const queuedJob = await this.db.get(
                 `SELECT pq.*, u.username 
@@ -409,6 +412,57 @@ class OctoPrintService {
             }
         } catch (error) {
             console.error('❌ Error processing queue:', error);
+        }
+    }
+
+    // Sync print queue status with actual printer status
+    async syncQueueWithPrinterStatus() {
+        try {
+            console.log('🔄 Syncing queue status with printer status...');
+            
+            // Get all jobs that are marked as "printing" in the database
+            const printingJobs = await this.db.all(
+                'SELECT * FROM print_queue WHERE status = "printing"'
+            );
+
+            for (const job of printingJobs) {
+                if (job.printer_id) {
+                    try {
+                        const printerStatus = await this.getPrinterStatus(job.printer_id);
+                        
+                        if (printerStatus) {
+                            const printerState = printerStatus.state?.text?.toLowerCase();
+                            const hasActiveJob = !!printerStatus.job?.job?.file?.name;
+                            
+                            console.log(`📊 Job ${job.id} on printer ${job.printer_id}: printer state="${printerState}", hasActiveJob=${hasActiveJob}`);
+                            
+                            // If printer is operational/idle and has no active job, the print was interrupted
+                            if ((printerState === 'operational' || printerState === 'ready') && !hasActiveJob) {
+                                console.log(`⚠️ Print job ${job.id} was interrupted - resetting to queued`);
+                                await this.db.run(
+                                    'UPDATE print_queue SET status = ?, started_at = NULL WHERE id = ?',
+                                    ['queued', job.id]
+                                );
+                            }
+                            // If printer is printing but job is completed, mark as completed
+                            else if (printerState === 'operational' && hasActiveJob) {
+                                const progress = printerStatus.job?.progress?.completion || 0;
+                                if (progress >= 100) {
+                                    console.log(`✅ Print job ${job.id} completed`);
+                                    await this.db.run(
+                                        'UPDATE print_queue SET status = ?, completed_at = ?, progress = ? WHERE id = ?',
+                                        ['completed', new Date().toISOString(), 100, job.id]
+                                    );
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ Could not check status for printer ${job.printer_id}:`, error.message);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error syncing queue with printer status:', error);
         }
     }
 
