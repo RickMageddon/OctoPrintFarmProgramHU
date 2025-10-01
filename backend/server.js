@@ -292,8 +292,16 @@ cron.schedule('*/30 * * * * *', async () => {
     }
 });
 
-// Background job to process print queue
+// Background job to process print queue (disabled by default after restart)
+global.autoProcessingEnabled = false;
+console.log('🚫 Automatic queue processing is DISABLED by default. Use admin controls to enable.');
+
 cron.schedule('*/10 * * * * *', async () => {
+    if (!global.autoProcessingEnabled) {
+        // Skip automatic processing - only process manually triggered
+        return;
+    }
+    
     try {
         await octoprintService.processQueue();
     } catch (error) {

@@ -482,4 +482,42 @@ router.post('/process', requireAuth, async (req, res) => {
     }
 });
 
+// Enable/disable automatic queue processing
+router.post('/auto-processing/:action', requireAuth, async (req, res) => {
+    try {
+        if (!req.user.is_admin) {
+            return res.status(403).json({ error: 'Admin privileges required' });
+        }
+
+        const action = req.params.action;
+        const server = req.app.locals.server;
+        
+        if (action === 'enable') {
+            global.autoProcessingEnabled = true;
+            console.log('✅ Automatic queue processing ENABLED');
+            res.json({ success: true, message: 'Automatic queue processing enabled', enabled: true });
+        } else if (action === 'disable') {
+            global.autoProcessingEnabled = false;
+            console.log('❌ Automatic queue processing DISABLED');
+            res.json({ success: true, message: 'Automatic queue processing disabled', enabled: false });
+        } else {
+            res.status(400).json({ error: 'Invalid action. Use "enable" or "disable"' });
+        }
+    } catch (error) {
+        console.error('Error changing auto-processing setting:', error);
+        res.status(500).json({ error: 'Failed to change auto-processing setting' });
+    }
+});
+
+// Get current auto-processing status
+router.get('/auto-processing/status', requireAuth, async (req, res) => {
+    try {
+        const enabled = global.autoProcessingEnabled || false;
+        res.json({ enabled: enabled });
+    } catch (error) {
+        console.error('Error getting auto-processing status:', error);
+        res.status(500).json({ error: 'Failed to get auto-processing status' });
+    }
+});
+
 module.exports = router;
