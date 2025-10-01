@@ -54,7 +54,10 @@ const FilesPage = () => {
     const fetchFiles = async () => {
         try {
             setLoading(true);
+            console.log('[FILES] Fetching files from /api/files/user...');
             const response = await axios.get('/api/files/user');
+            console.log('[FILES] Response received:', response.data);
+            console.log('[FILES] Files array:', response.data.files);
             setFiles(response.data.files || []);
         } catch (error) {
             console.error('Error fetching files:', error);
