@@ -1,3 +1,53 @@
+// Mark file as favorite
+router.post('/:id/favorite', requireAuth, requireVerifiedEmail, async (req, res) => {
+    const fileId = parseInt(req.params.id);
+    const db = req.app.locals.db;
+    if (isNaN(fileId)) {
+        console.log(`[FAVORITE][POST] Ongeldig bestand id: ${req.params.id}`);
+        return res.status(400).json({ error: 'Ongeldig bestand id' });
+    }
+    try {
+        // Check max 5 favorites per user
+        const favCount = await db.get('SELECT COUNT(*) as count FROM user_favorites WHERE user_id = ? AND is_favorite = 1', [req.user.id]);
+        if (favCount.count >= 5) {
+            console.log(`[FAVORITE][POST] Gebruiker ${req.user.id} heeft al 5 favorieten.`);
+            return res.status(400).json({ error: 'Maximaal 5 favorieten toegestaan.' });
+        }
+        // Set is_favorite = 1
+        const result = await db.run('UPDATE user_favorites SET is_favorite = 1 WHERE id = ? AND user_id = ?', [fileId, req.user.id]);
+        if (result.changes === 0) {
+            console.log(`[FAVORITE][POST] Bestand niet gevonden of geen rechten: ${fileId}`);
+            return res.status(404).json({ error: 'Bestand niet gevonden of geen rechten' });
+        }
+        console.log(`[FAVORITE][POST] Bestand ${fileId} favoriet gemaakt door gebruiker ${req.user.id}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[FAVORITE][POST] Fout:', error);
+        res.status(500).json({ error: 'Kon favoriet niet instellen' });
+    }
+});
+
+// Remove favorite status
+router.delete('/:id/favorite', requireAuth, requireVerifiedEmail, async (req, res) => {
+    const fileId = parseInt(req.params.id);
+    const db = req.app.locals.db;
+    if (isNaN(fileId)) {
+        console.log(`[FAVORITE][DELETE] Ongeldig bestand id: ${req.params.id}`);
+        return res.status(400).json({ error: 'Ongeldig bestand id' });
+    }
+    try {
+        const result = await db.run('UPDATE user_favorites SET is_favorite = 0 WHERE id = ? AND user_id = ?', [fileId, req.user.id]);
+        if (result.changes === 0) {
+            console.log(`[FAVORITE][DELETE] Bestand niet gevonden of geen rechten: ${fileId}`);
+            return res.status(404).json({ error: 'Bestand niet gevonden of geen rechten' });
+        }
+        console.log(`[FAVORITE][DELETE] Favoriet verwijderd van bestand ${fileId} door gebruiker ${req.user.id}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[FAVORITE][DELETE] Fout:', error);
+        res.status(500).json({ error: 'Kon favoriet niet verwijderen' });
+    }
+});
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -182,20 +232,6 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
             ]
         );
 
-        // If we need to replace a favorite, delete the old one
-        if (favoriteToReplace) {
-            await db.run(
-                'DELETE FROM user_favorites WHERE id = ?',
-                [favoriteToReplace.id]
-            );
-
-            // Delete the old file
-            try {
-                await fs.unlink(favoriteToReplace.file_path);
-            } catch (error) {
-                console.error('Error deleting old file:', error);
-            }
-        }
 
         // Log the upload (skip if session_logs table doesn't exist)
         try {
@@ -222,8 +258,7 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
                 originalName: req.file.originalname,
                 size: req.file.size,
                 estimatedTime: estimatedTime
-            },
-            replaced: favoriteToReplace ? favoriteToReplace.original_filename : null
+            }
         });
 
     } catch (error) {

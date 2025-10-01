@@ -69,6 +69,7 @@ class Database {
                 file_path VARCHAR(500) NOT NULL,
                 file_size INTEGER,
                 upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                is_favorite INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )`,
 
