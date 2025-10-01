@@ -329,53 +329,54 @@ router.post('/github/device/poll', async (req, res) => {
 
 // Helper function to check GitHub organization membership
 async function checkGitHubOrgMembership(accessToken, username) {
+    // Helper voor lichtblauwe achtergrond in console.log
+    const blueBg = (msg) => `\x1b[44m\x1b[97m${msg}\x1b[0m`;
     try {
         const orgName = process.env.GITHUB_ORG_NAME;
         if (!orgName) {
-            console.log('⚠️ No GITHUB_ORG_NAME configured, skipping org check');
+            console.log(blueBg('⚠️ No GITHUB_ORG_NAME configured, skipping org check'));
             return false;
         }
 
-        console.log(`🔍 Checking if ${username} is member of ${orgName}...`);
-        
-        // Check organization membership using GitHub API
-        const response = await axios.get(`https://api.github.com/orgs/${orgName}/members/${username}`, {
-            headers: {
-                'Authorization': `token ${accessToken}`,
-                'Accept': 'application/json'
-            }
-        });
+        console.log(blueBg(`🔍 Checking if ${username} is member of ${orgName}...`));
 
-        // If we get here without error, user is a public member
-        console.log(`✅ ${username} is a public member of ${orgName}`);
-        return true;
-    } catch (error) {
-        if (error.response?.status === 404) {
-            console.log(`❌ ${username} is not a member of ${orgName} or membership is private`);
-            return false;
-        } else if (error.response?.status === 302) {
-            // 302 means user is a private member - we need to check differently
-            console.log(`🔍 ${username} might be a private member, checking with different approach...`);
+        // Check organization membership using GitHub API
+        try {
+            const response = await axios.get(`https://api.github.com/orgs/${orgName}/members/${username}`, {
+                headers: {
+                    'Authorization': `token ${accessToken}`,
+                    'Accept': 'application/json'
+                }
+            });
+            // If we get here without error, user is a public member
+            console.log(blueBg(`✅ ${username} is a public member of ${orgName}`));
+            return true;
+        } catch (error) {
+            if (error.response?.status === 404) {
+                console.log(blueBg(`❌ ${username} is not a member of ${orgName} or membership is private`));
+            } else {
+                console.log(blueBg(`⚠️ Error on public org check: ${error.message}`));
+            }
+            // Fallback: check all orgs for private membership
+            console.log(blueBg(`🔍 Fallback: checking all orgs for ${username}...`));
             try {
-                // Try to get user's organization memberships
                 const orgsResponse = await axios.get(`https://api.github.com/user/orgs`, {
                     headers: {
                         'Authorization': `token ${accessToken}`,
                         'Accept': 'application/json'
                     }
                 });
-                
-                const isMember = orgsResponse.data.some(org => org.login === process.env.GITHUB_ORG_NAME);
-                console.log(`${isMember ? '✅' : '❌'} ${username} org membership confirmed: ${isMember}`);
+                const isMember = orgsResponse.data.some(org => org.login === orgName);
+                console.log(blueBg(`${isMember ? '✅' : '❌'} ${username} org membership confirmed via fallback: ${isMember}`));
                 return isMember;
             } catch (orgsError) {
-                console.error('Error checking user organizations:', orgsError.message);
+                console.error(blueBg('Error checking user organizations (fallback): ' + orgsError.message));
                 return false;
             }
-        } else {
-            console.error('Error checking GitHub org membership:', error.message);
-            return false;
         }
+    } catch (error) {
+        console.error(blueBg('Error checking GitHub org membership (outer): ' + error.message));
+        return false;
     }
 }
 
