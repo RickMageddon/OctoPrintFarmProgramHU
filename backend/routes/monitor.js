@@ -45,7 +45,24 @@ router.get('/data', async (req, res) => {
             const printerStatuses = await octoprintService.getAllPrinterStatus();
             console.log('[MONITOR] Got printer statuses:', printerStatuses.length, 'printers');
             
+            // Get active print jobs from database to match with printer status
+            const activePrintJobs = await db.all(`
+                SELECT 
+                    pq.printer_id,
+                    pq.filename,
+                    pq.status,
+                    u.username,
+                    u.study_direction
+                FROM print_queue pq
+                JOIN users u ON pq.user_id = u.id
+                WHERE pq.status = 'printing'
+            `);
+            console.log('[MONITOR] Active print jobs from DB:', activePrintJobs);
+            
             printers = printerStatuses.map(printer => {
+                // Find matching print job from database
+                const activeJob = activePrintJobs.find(job => job.printer_id === printer.id);
+                
                 const mappedPrinter = {
                     id: printer.id,
                     name: printer.name,
@@ -54,9 +71,14 @@ router.get('/data', async (req, res) => {
                     hotend_temp: Math.round(printer.temperature?.tool0?.actual || 0),
                     current_print_job: printer.job?.job?.file?.name || null,
                     print_progress: Math.round(printer.job?.progress?.completion || 0),
-                    estimated_time_remaining: printer.job?.progress?.printTimeLeft ? Math.round(printer.job.progress.printTimeLeft / 60) : 0
+                    estimated_time_remaining: printer.job?.progress?.printTimeLeft ? Math.round(printer.job.progress.printTimeLeft / 60) : 0,
+                    // Add user information from database
+                    current_user: activeJob ? {
+                        username: activeJob.username,
+                        study_direction: activeJob.study_direction
+                    } : null
                 };
-                console.log(`[MONITOR] Printer ${printer.id}: ${mappedPrinter.status}, ${mappedPrinter.hotend_temp}°C, ${mappedPrinter.print_progress}%`);
+                console.log(`[MONITOR] Printer ${printer.id}: ${mappedPrinter.status}, ${mappedPrinter.hotend_temp}°C, ${mappedPrinter.print_progress}%, user: ${activeJob?.username || 'none'}`);
                 return mappedPrinter;
             });
         } catch (printerError) {
@@ -122,9 +144,39 @@ router.get('/data', async (req, res) => {
 
         res.json({
             printers: printers.length > 0 ? printers : [
-                { id: 1, name: 'Prusa Printer 1', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 },
-                { id: 2, name: 'Prusa Printer 2', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 },
-                { id: 3, name: 'Prusa Printer 3', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 }
+                { 
+                    id: 1, 
+                    name: 'Prusa Printer 1', 
+                    status: 'offline', 
+                    bed_temp: 0, 
+                    hotend_temp: 0, 
+                    current_print_job: null, 
+                    print_progress: 0, 
+                    estimated_time_remaining: 0,
+                    current_user: null
+                },
+                { 
+                    id: 2, 
+                    name: 'Prusa Printer 2', 
+                    status: 'offline', 
+                    bed_temp: 0, 
+                    hotend_temp: 0, 
+                    current_print_job: null, 
+                    print_progress: 0, 
+                    estimated_time_remaining: 0,
+                    current_user: null
+                },
+                { 
+                    id: 3, 
+                    name: 'Prusa Printer 3', 
+                    status: 'offline', 
+                    bed_temp: 0, 
+                    hotend_temp: 0, 
+                    current_print_job: null, 
+                    print_progress: 0, 
+                    estimated_time_remaining: 0,
+                    current_user: null
+                }
             ],
             queue: queue.map(item => ({
                 ...item,
@@ -157,7 +209,11 @@ router.get('/data', async (req, res) => {
                     hotend_temp: 215,
                     current_print_job: 'phone_case_v2.gcode',
                     print_progress: 67,
-                    estimated_time_remaining: 83
+                    estimated_time_remaining: 83,
+                    current_user: {
+                        username: 'jan.janssen',
+                        study_direction: 'TI'
+                    }
                 },
                 {
                     id: 2,
@@ -167,7 +223,8 @@ router.get('/data', async (req, res) => {
                     hotend_temp: 25,
                     current_print_job: null,
                     print_progress: 0,
-                    estimated_time_remaining: 0
+                    estimated_time_remaining: 0,
+                    current_user: null
                 },
                 {
                     id: 3,
@@ -177,7 +234,8 @@ router.get('/data', async (req, res) => {
                     hotend_temp: 0,
                     current_print_job: null,
                     print_progress: 0,
-                    estimated_time_remaining: 0
+                    estimated_time_remaining: 0,
+                    current_user: null
                 }
             ],
             queue: [

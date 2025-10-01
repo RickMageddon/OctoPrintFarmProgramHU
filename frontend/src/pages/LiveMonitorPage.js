@@ -302,6 +302,25 @@ const LiveMonitorPage = () => {
                                         </div>
                                     </div>
 
+                                    {/* Current User Info */}
+                                    {printer.current_user && (
+                                        <div style={{
+                                            gridColumn: 'span 2',
+                                            background: 'rgba(0, 0, 0, 0.3)',
+                                            padding: '8px',
+                                            borderRadius: '6px',
+                                            textAlign: 'center',
+                                            marginTop: '8px'
+                                        }}>
+                                            <div style={{ fontSize: '0.65rem', opacity: 0.8, marginBottom: '3px' }}>
+                                                Gebruiker
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                👤 {printer.current_user.username} ({printer.current_user.study_direction})
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Progress Bar */}
                                     <div style={{
                                         gridColumn: 'span 2',
