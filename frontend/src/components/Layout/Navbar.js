@@ -104,11 +104,18 @@ const Navbar = () => {
               onClick={() => item.external ? window.open(item.path, '_blank') : navigate(item.path)}
               sx={{
                 mx: 1,
-                color: isActive(item.path) ? 'primary.main' : 'inherit',
-                backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                color: isActive(item.path) ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
+                backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                fontWeight: isActive(item.path) ? 600 : 400,
+                borderRadius: 2,
+                px: 2,
+                py: 1,
+                border: isActive(item.path) ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: isActive(item.path) ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.1)',
+                  color: '#ffffff',
                 },
+                transition: 'all 0.2s ease-in-out',
               }}
             >
               {item.label}
@@ -133,8 +140,18 @@ const Navbar = () => {
             onClick={() => navigate('/admin')}
             sx={{
               mr: 1,
-              color: isActive('/admin') ? 'primary.main' : 'inherit',
-              backgroundColor: isActive('/admin') ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              color: isActive('/admin') ? '#ffffff' : 'rgba(255, 255, 255, 0.8)',
+              backgroundColor: isActive('/admin') ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+              fontWeight: isActive('/admin') ? 600 : 400,
+              borderRadius: 2,
+              px: 2,
+              py: 1,
+              border: isActive('/admin') ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
+              '&:hover': {
+                backgroundColor: isActive('/admin') ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+              },
+              transition: 'all 0.2s ease-in-out',
             }}
           >
             Admin
