@@ -21,7 +21,14 @@ import {
     Alert,
     LinearProgress,
     Paper,
-    Snackbar
+    Snackbar,
+    TextField,
+    Select,
+    MenuItem,
+    InputLabel,
+    FormControl,
+    Checkbox,
+    FormControlLabel
 } from '@mui/material';
 import {
     CloudUpload,
@@ -34,7 +41,9 @@ import {
     Visibility,
     FileUpload,
     Code,
-    Warning
+    Warning,
+    Star,
+    Close
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import axios from 'axios';
@@ -50,6 +59,16 @@ const FilesPage = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [printerStatus, setPrinterStatus] = useState([]);
+    
+    // Print dialog state
+    const [printDialog, setPrintDialog] = useState({ open: false, file: null });
+    const [printer, setPrinter] = useState('auto');
+    const [priority, setPriority] = useState('normal');
+    const [filamentChange, setFilamentChange] = useState(false);
+    const [notes, setNotes] = useState('');
+    const [printError, setPrintError] = useState('');
+    
     const fileInputRef = useRef();
 
     // Fetch user's uploaded files
@@ -82,7 +101,19 @@ const FilesPage = () => {
 
     useEffect(() => {
         fetchFiles();
+        fetchPrinterStatus();
     }, []);
+
+    // Fetch printer status for the print dialog
+    const fetchPrinterStatus = async () => {
+        try {
+            const response = await axios.get('/api/printers/status');
+            setPrinterStatus(response.data);
+        } catch (error) {
+            console.error('Error fetching printer status:', error);
+            setPrinterStatus([]);
+        }
+    };
 
     const handleFileSelect = (event) => {
         const file = event.target.files[0];
@@ -179,23 +210,45 @@ const FilesPage = () => {
         }
     };
 
-    const handlePrint = async (fileId) => {
+    const handlePrint = (file) => {
+        console.log(`[PRINT] Opening print dialog for file:`, file);
+        setPrintDialog({ open: true, file });
+        setPrinter('auto');
+        setPriority('normal');
+        setFilamentChange(false);
+        setNotes('');
+        setPrintError('');
+    };
+
+    const handlePrintSubmit = async () => {
         try {
-            console.log(`[PRINT] Adding file ${fileId} to print queue...`);
+            setPrintError('');
+            console.log(`[PRINT] Submitting print job for file ${printDialog.file.id}...`);
+            
             const payload = {
-                fileId: fileId, // Changed from favoriteId to fileId for clarity
-                priority: 'normal'
+                fileId: printDialog.file.id,
+                printer: printer,
+                priority: priority,
+                filamentChange: filamentChange,
+                notes: notes
             };
             console.log(`[PRINT] Sending payload:`, payload);
             
             const response = await axios.post('/api/queue/add', payload);
             console.log(`[PRINT] Success response:`, response.data);
-            setSuccessMessage('Bestand succesvol toegevoegd aan print wachtrij!');
+            
+            setSuccessMessage(`Bestand "${printDialog.file.original_filename || printDialog.file.filename}" succesvol toegevoegd aan print wachtrij!`);
+            setPrintDialog({ open: false, file: null });
+            
+            // Reset form
+            setPrinter('auto');
+            setPriority('normal');
+            setFilamentChange(false);
+            setNotes('');
         } catch (error) {
             console.error('Print error:', error);
             console.error('Print error response:', error.response?.data);
-            console.error('Print error status:', error.response?.status);
-            setError(`Kon bestand niet toevoegen aan wachtrij: ${error.response?.data?.error || error.message}`);
+            setPrintError(`Kon bestand niet toevoegen aan wachtrij: ${error.response?.data?.error || error.message}`);
         }
     };
 
@@ -260,6 +313,99 @@ const FilesPage = () => {
                     </Alert>
                 )}
 
+                {/* Favorieten Sectie */}
+                <Typography variant="h5" gutterBottom sx={{ mt: 2, mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <Favorite sx={{ mr: 1, color: 'secondary.main' }} />
+                    Mijn Favorieten
+                </Typography>
+                
+                {files.filter(file => file.is_favorite).length === 0 ? (
+                    <Card sx={{ mb: 4 }}>
+                        <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                            <FavoriteBorder sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h6" gutterBottom>
+                                Nog geen favoriete bestanden
+                            </Typography>
+                            <Typography color="text.secondary">
+                                Klik op het hartje bij een bestand om het als favoriet toe te voegen
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Grid container spacing={2} sx={{ mb: 4 }}>
+                        {files.filter(file => file.is_favorite).map((file, index) => (
+                            <Grid item xs={12} key={`fav-${file.id}`}>
+                                <motion.div
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                                >
+                                    <Card sx={{ backgroundColor: 'rgba(25, 118, 210, 0.08)' }}>
+                                        <CardContent>
+                                            <Box display="flex" alignItems="center">
+                                                <Code sx={{ fontSize: 40, mr: 2, color: 'secondary.main' }} />
+                                                <Box flex={1}>
+                                                    <Typography variant="h6" gutterBottom>
+                                                        {file.original_filename || file.filename}
+                                                    </Typography>
+                                                    <Box display="flex" gap={1} mb={1}>
+                                                        <Chip label={formatFileSize(file.file_size)} size="small" />
+                                                        <Chip label={formatDate(file.upload_date)} size="small" variant="outlined" />
+                                                        <Chip 
+                                                            icon={<Favorite />} 
+                                                            label="Favoriet" 
+                                                            size="small" 
+                                                            color="secondary"
+                                                        />
+                                                    </Box>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        Geüpload: {formatDate(file.upload_date)}
+                                                    </Typography>
+                                                </Box>
+                                                <Box display="flex" gap={1}>
+                                                    <IconButton
+                                                        onClick={() => handleFavorite(file.id, file.is_favorite)}
+                                                        color="secondary"
+                                                        title="Verwijder van favorieten"
+                                                    >
+                                                        <Favorite />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        onClick={() => handlePrint(file)}
+                                                        color="primary"
+                                                        title="Voeg toe aan print wachtrij"
+                                                    >
+                                                        <Print />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        href={`/api/files/${file.id}/download`}
+                                                        title="Download bestand"
+                                                    >
+                                                        <Download />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        onClick={() => openDeleteDialog(file.id, file.original_filename || file.filename)}
+                                                        color="error"
+                                                        title="Verwijder bestand"
+                                                    >
+                                                        <Delete />
+                                                    </IconButton>
+                                                </Box>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            </Grid>
+                        ))}
+                    </Grid>
+                )}
+
+                {/* Alle Bestanden Sectie */}
+                <Typography variant="h5" gutterBottom sx={{ mt: 4, mb: 2, display: 'flex', alignItems: 'center' }}>
+                    <InsertDriveFile sx={{ mr: 1, color: 'primary.main' }} />
+                    Alle Bestanden
+                </Typography>
+
                 {files.length === 0 ? (
                     <Card>
                         <CardContent sx={{ textAlign: 'center', py: 6 }}>
@@ -280,15 +426,15 @@ const FilesPage = () => {
                         </CardContent>
                     </Card>
                 ) : (
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         {files.map((file, index) => (
-                            <Grid item xs={12} key={file.id}>
+                            <Grid item xs={12} key={`all-${file.id}`}>
                                 <motion.div
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.3, delay: index * 0.1 }}
                                 >
-                                    <Card>
+                                    <Card sx={{ backgroundColor: file.is_favorite ? 'rgba(25, 118, 210, 0.04)' : 'inherit' }}>
                                         <CardContent>
                                             <Box display="flex" alignItems="center">
                                                 <Code sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
@@ -321,7 +467,7 @@ const FilesPage = () => {
                                                         {file.is_favorite ? <Favorite /> : <FavoriteBorder />}
                                                     </IconButton>
                                                     <IconButton
-                                                        onClick={() => handlePrint(file.id)}
+                                                        onClick={() => handlePrint(file)}
                                                         color="primary"
                                                         title="Voeg toe aan print wachtrij"
                                                     >
@@ -455,6 +601,102 @@ const FilesPage = () => {
                     {successMessage}
                 </Alert>
             </Snackbar>
+
+            {/* Print Dialog */}
+            <Dialog 
+                open={printDialog.open} 
+                onClose={() => setPrintDialog({ open: false, file: null })} 
+                maxWidth="sm" 
+                fullWidth
+            >
+                <DialogTitle>
+                    Bestand Printen
+                    <IconButton
+                        onClick={() => setPrintDialog({ open: false, file: null })}
+                        sx={{ position: 'absolute', right: 8, top: 8 }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    {printDialog.file && (
+                        <Box sx={{ mt: 1 }}>
+                            <Typography variant="h6" gutterBottom>
+                                {printDialog.file.original_filename || printDialog.file.filename}
+                            </Typography>
+                            
+                            <TextField
+                                select
+                                fullWidth
+                                label="Printer"
+                                value={printer}
+                                onChange={(e) => setPrinter(e.target.value)}
+                                margin="normal"
+                                required
+                            >
+                                <MenuItem value="auto">Automatisch toewijzen</MenuItem>
+                                <MenuItem value="1">Printer 1</MenuItem>
+                                <MenuItem value="2">Printer 2</MenuItem>
+                                <MenuItem value="3">Printer 3</MenuItem>
+                            </TextField>
+
+                            <TextField
+                                select
+                                fullWidth
+                                label="Prioriteit"
+                                value={priority}
+                                onChange={(e) => setPriority(e.target.value)}
+                                margin="normal"
+                            >
+                                <MenuItem value="low">Laag</MenuItem>
+                                <MenuItem value="normal">Normaal</MenuItem>
+                                <MenuItem value="high">Hoog</MenuItem>
+                            </TextField>
+
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={filamentChange}
+                                        onChange={(e) => setFilamentChange(e.target.checked)}
+                                    />
+                                }
+                                label="Filament wissel vereist"
+                                sx={{ mt: 2, mb: 1 }}
+                            />
+
+                            <TextField
+                                fullWidth
+                                label="Notities (optioneel)"
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                multiline
+                                rows={3}
+                                margin="normal"
+                                placeholder="Voeg eventuele opmerkingen toe..."
+                            />
+
+                            {printError && (
+                                <Alert severity="error" sx={{ mt: 2 }}>
+                                    {printError}
+                                </Alert>
+                            )}
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button onClick={() => setPrintDialog({ open: false, file: null })}>
+                        Annuleren
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handlePrintSubmit}
+                        disabled={!printer}
+                        startIcon={<Print />}
+                    >
+                        Printen
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };
