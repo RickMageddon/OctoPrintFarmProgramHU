@@ -158,7 +158,11 @@ app.use('/api/printers', printerRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/users', userRoutes);
-app.use('/monitor', require('./routes/monitor'));
+
+// Monitor routes - split HTML and API
+const monitorRoutes = require('./routes/monitor');
+app.use('/monitor', monitorRoutes); // HTML page at /monitor
+app.use('/api/monitor', monitorRoutes); // API endpoints at /api/monitor/data
 
 // Health check endpoint
 app.get('/health', (req, res) => {
