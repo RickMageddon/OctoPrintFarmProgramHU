@@ -1,3 +1,55 @@
+// Pauzeer een gebruiker (admin only)
+router.post('/:id/pause', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET paused = 1 WHERE id = ?', [userId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to pause user' });
+    }
+});
+
+// Blokkeer een gebruiker (admin only)
+router.post('/:id/block', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET blocked = 1 WHERE id = ?', [userId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to block user' });
+    }
+});
+
+// Warning plaatsen voor gebruiker (admin only)
+router.post('/:id/warning', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { text } = req.body;
+        if (isNaN(userId) || !text) return res.status(400).json({ error: 'Invalid user ID or text' });
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET warning = ? WHERE id = ?', [text, userId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to set warning' });
+    }
+});
+
+// GitHub login resetten (admin only)
+router.post('/:id/reset-github', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET github_id = NULL, github_username = NULL, github_email = NULL, github_linked = 0 WHERE id = ?', [userId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to reset GitHub login' });
+    }
+});
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');

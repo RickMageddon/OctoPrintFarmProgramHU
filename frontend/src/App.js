@@ -17,6 +17,7 @@ import GitHubDeviceFlow from './components/GitHubDeviceFlow';
 import DashboardPage from './pages/DashboardPage';
 import PrintersPage from './pages/PrintersPage';
 import FilesPage from './pages/FilesPage';
+import AdminPanelPage from './pages/AdminPanelPage';
 import QueuePage from './pages/QueuePage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
@@ -291,10 +292,10 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AdminRoute>
-                  <AdminPage />
+                  <AdminPanelPage />
                 </AdminRoute>
               </ProtectedRoute>
-            } 
+            }
           />
 
           {/* Live Monitor - Public access */}

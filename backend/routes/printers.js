@@ -1,3 +1,17 @@
+// Zet printer op onderhoud of weer beschikbaar (admin only)
+router.post('/:id/maintenance', requireAuth, async (req, res) => {
+    try {
+        if (!req.user.is_admin) return res.status(403).json({ error: 'Admin privileges required' });
+        const printerId = parseInt(req.params.id);
+        const { maintenance } = req.body;
+        if (isNaN(printerId) || typeof maintenance !== 'boolean') return res.status(400).json({ error: 'Invalid params' });
+        const db = req.app.locals.db;
+        await db.run('UPDATE printer_status SET maintenance = ? WHERE id = ?', [maintenance ? 1 : 0, printerId]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update printer maintenance status' });
+    }
+});
 const express = require('express');
 const router = express.Router();
 
