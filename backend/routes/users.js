@@ -368,7 +368,6 @@ router.get('/', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res
                 u.github_id,
                 u.username,
                 u.email,
-                u.hu_email,
                 u.email_verified,
                 u.is_admin,
                 u.github_org_member,
@@ -389,9 +388,9 @@ router.get('/', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res
         let params = [];
 
         if (search) {
-            query += ' WHERE u.username LIKE ? OR u.email LIKE ? OR u.hu_email LIKE ?';
+            query += ' WHERE u.username LIKE ? OR u.email LIKE ?';
             const searchPattern = `%${search}%`;
-            params.push(searchPattern, searchPattern, searchPattern);
+            params.push(searchPattern, searchPattern);
         }
 
         query += `
@@ -409,9 +408,9 @@ router.get('/', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res
         let countParams = [];
 
         if (search) {
-            countQuery += ' WHERE username LIKE ? OR email LIKE ? OR hu_email LIKE ?';
+            countQuery += ' WHERE username LIKE ? OR email LIKE ?';
             const searchPattern = `%${search}%`;
-            countParams.push(searchPattern, searchPattern, searchPattern);
+            countParams.push(searchPattern, searchPattern);
         }
 
         const total = await db.get(countQuery, countParams);
@@ -446,9 +445,13 @@ router.get('/:id', requireAuth, requireVerifiedEmail, requireAdmin, async (req, 
                 github_id,
                 username,
                 email,
-                hu_email,
                 email_verified,
                 is_admin,
+                github_org_member,
+                github_username,
+                paused,
+                blocked,
+                warning,
                 created_at,
                 last_login,
                 github_organizations
