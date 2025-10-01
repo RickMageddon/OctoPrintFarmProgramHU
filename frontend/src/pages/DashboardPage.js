@@ -390,7 +390,7 @@ const DashboardPage = () => {
                           {printer.job.job.file.name}
                         </Typography>
                         
-                        {printer.job.progress?.completion && (
+                        {(printer.job.job?.file?.name && printer.job.progress?.completion > 0) && (
                           <Box mt={1}>
                             <LinearProgress
                               variant="determinate"

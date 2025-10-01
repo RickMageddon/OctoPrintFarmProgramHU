@@ -398,34 +398,34 @@ async function processGitHubAuth(req, res, githubUser, githubEmails, isOrgMember
         
         if (existingGithubUser) {
             console.log('✅ GitHub account already linked, logging in existing user');
-            
+
             // Auto-complete first login if user already has study direction
-            let updateQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP, github_org_member = ?';
-            let updateParams = [isOrgMember, existingGithubUser.id];
-            
+            let updateQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP, github_org_member = ?, is_admin = ?';
+            let updateParams = [isOrgMember, isOrgMember, existingGithubUser.id];
+
             if (existingGithubUser.study_direction && !existingGithubUser.first_login_completed) {
                 console.log('🔧 Auto-completing first login for user with existing study direction');
                 updateQuery += ', first_login_completed = 1';
             }
-            
+
             updateQuery += ' WHERE id = ?';
             await db.run(updateQuery, updateParams);
-            
+
             // Get updated user data
             const updatedExistingUser = await db.get('SELECT * FROM users WHERE id = ?', [existingGithubUser.id]);
-            
+
             // Store user in session
             req.session.user = updatedExistingUser;
-            
+
             // Clean up device flow session
             delete req.session.device_code;
             delete req.session.device_code_expires;
-            
+
             // Check if this is their first completed login
             // Always redirect to dashboard, but indicate if study direction is missing
             const needsStudyDirection = !updatedExistingUser.study_direction;
             const redirectPath = '/dashboard';
-            
+
             console.log('🚀 Sending success response with redirect:', redirectPath);
             return res.json({ 
                 status: 'success', 

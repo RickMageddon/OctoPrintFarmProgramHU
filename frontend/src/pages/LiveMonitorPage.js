@@ -321,37 +321,39 @@ const LiveMonitorPage = () => {
                                         </div>
                                     )}
 
-                                    {/* Progress Bar */}
-                                    <div style={{
-                                        gridColumn: 'span 2',
-                                        marginTop: '10px'
-                                    }}>
+                                    {/* Progress Bar alleen tonen als er een actieve print is */}
+                                    {(printer.current_print_job && printer.print_progress > 0) && (
                                         <div style={{
-                                            width: '100%',
-                                            height: '12px',
-                                            background: 'rgba(0, 0, 0, 0.3)',
-                                            borderRadius: '6px',
-                                            overflow: 'hidden',
-                                            marginBottom: '6px'
+                                            gridColumn: 'span 2',
+                                            marginTop: '10px'
                                         }}>
                                             <div style={{
-                                                height: '100%',
-                                                background: 'linear-gradient(90deg, #4caf50, #81c784)',
+                                                width: '100%',
+                                                height: '12px',
+                                                background: 'rgba(0, 0, 0, 0.3)',
                                                 borderRadius: '6px',
-                                                transition: 'width 1s ease',
-                                                width: `${printer.print_progress || 0}%`
-                                            }} />
+                                                overflow: 'hidden',
+                                                marginBottom: '6px'
+                                            }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    background: 'linear-gradient(90deg, #4caf50, #81c784)',
+                                                    borderRadius: '6px',
+                                                    transition: 'width 1s ease',
+                                                    width: `${printer.print_progress || 0}%`
+                                                }} />
+                                            </div>
+                                            <div style={{
+                                                textAlign: 'center',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                lineHeight: 1.2,
+                                                marginTop: 0
+                                            }}>
+                                                {printer.current_print_job}
+                                            </div>
                                         </div>
-                                        <div style={{
-                                            textAlign: 'center',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 'bold',
-                                            lineHeight: 1.2,
-                                            marginTop: 0
-                                        }}>
-                                            {printer.current_print_job || 'Geen actieve print'}
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
