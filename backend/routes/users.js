@@ -296,16 +296,27 @@ router.post('/avatar', (req, res, next) => {
         }
 
         const db = req.app.locals.db;
-        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+        // Use full backend URL for avatar to ensure it's accessible from frontend
+        const backendUrl = process.env.BACKEND_URL || 'http://3dprinters:3001';
+        const avatarUrl = `${backendUrl}/uploads/avatars/${req.file.filename}`;
         console.log('🔗 Generated avatar URL:', avatarUrl);
 
         // Delete old avatar if exists
         const oldUser = await db.get('SELECT avatar_url FROM users WHERE id = ?', [req.user.id]);
-        if (oldUser?.avatar_url && oldUser.avatar_url.startsWith('/uploads/avatars/')) {
-            const oldPath = path.join(__dirname, '../../', oldUser.avatar_url);
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-                console.log('🗑️ Deleted old avatar:', oldPath);
+        if (oldUser?.avatar_url) {
+            let oldFilePath;
+            if (oldUser.avatar_url.startsWith('/uploads/avatars/')) {
+                // Old relative path format
+                oldFilePath = path.join(__dirname, '../../', oldUser.avatar_url);
+            } else if (oldUser.avatar_url.includes('/uploads/avatars/')) {
+                // New full URL format - extract just the filename
+                const filename = oldUser.avatar_url.split('/uploads/avatars/').pop();
+                oldFilePath = path.join(__dirname, '../../uploads/avatars', filename);
+            }
+            
+            if (oldFilePath && fs.existsSync(oldFilePath)) {
+                fs.unlinkSync(oldFilePath);
+                console.log('🗑️ Deleted old avatar:', oldFilePath);
             }
         }
 

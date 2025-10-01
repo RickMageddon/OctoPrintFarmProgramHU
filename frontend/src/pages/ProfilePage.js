@@ -62,6 +62,23 @@ const ProfilePage = () => {
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
 
+    // Helper function to get correct avatar URL
+    const getAvatarUrl = (avatarUrl) => {
+        if (!avatarUrl) return null;
+        
+        // If it's already a full URL, return as is
+        if (avatarUrl.startsWith('http')) {
+            return avatarUrl;
+        }
+        
+        // If it's a relative path, convert to backend URL
+        if (avatarUrl.startsWith('/uploads/avatars/')) {
+            return `http://3dprinters:3001${avatarUrl}`;
+        }
+        
+        return avatarUrl;
+    };
+
     const studyDirections = [
         { value: 'TI', label: 'Technische Informatica (TI)' },
         { value: 'CSC', label: 'Cyber Security & Cloud (CSC)' },
@@ -297,7 +314,7 @@ const ProfilePage = () => {
                         <Card>
                             <CardContent sx={{ textAlign: 'center' }}>
                                 <Avatar
-                                    src={profile?.avatar_url}
+                                    src={getAvatarUrl(profile?.avatar_url)}
                                     sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
                                 >
                                     <Person sx={{ fontSize: 60 }} />
@@ -506,7 +523,7 @@ const ProfilePage = () => {
                         {/* Avatar Upload Section */}
                         <Box sx={{ textAlign: 'center', mb: 3 }}>
                             <Avatar
-                                src={avatarPreview || profile?.avatar_url}
+                                src={avatarPreview || getAvatarUrl(profile?.avatar_url)}
                                 sx={{ width: 100, height: 100, mx: 'auto', mb: 2 }}
                             >
                                 <Person sx={{ fontSize: 50 }} />
