@@ -206,6 +206,9 @@ const ProfilePage = () => {
                     // Force refresh profile data to ensure consistency
                     await fetchProfile();
                     
+                    // Also refresh the AuthContext user data to update navbar/other components
+                    await refreshUser();
+                    
                     console.log('[AVATAR] Avatar updated successfully');
                 } catch (avatarError) {
                     console.error('Error uploading avatar:', avatarError);

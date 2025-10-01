@@ -951,7 +951,7 @@ router.get('/user', requireAuth, async (req, res) => {
         const user = await db.get(
             `SELECT id, username, email, email_verified, github_id, github_username, 
                     github_linked, study_direction, is_admin, created_at, last_login,
-                    first_login_completed
+                    first_login_completed, avatar_url
              FROM users WHERE id = ?`,
             [req.user.id]
         );
