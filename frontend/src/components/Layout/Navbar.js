@@ -133,8 +133,8 @@ const Navbar = () => {
           sx={{ mr: 2 }}
         />
 
-        {/* Admin Button - Only for GitHub organization members */}
-        {user?.github_org_member && (
+        {/* Admin Button - Voor admins of GitHub org members */}
+        {(user?.is_admin || user?.github_org_member) && (
           <Button
             startIcon={<AdminPanelSettings />}
             onClick={() => navigate('/admin')}
