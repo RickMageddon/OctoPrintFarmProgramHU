@@ -309,12 +309,17 @@ router.post('/github/device/poll', async (req, res) => {
         const githubUser = userResponse.data;
         const githubEmails = emailResponse.data;
 
+        // Check GitHub organization membership for admin rights
+        console.log('🔄 Checking GitHub organization membership...');
+        const isOrgMember = await checkGitHubOrgMembership(access_token, githubUser.login);
+        console.log(`GitHub org member (${process.env.GITHUB_ORG_NAME}):`, isOrgMember);
+
         console.log('GitHub user:', githubUser.login);
         console.log('GitHub emails:', githubEmails.map(e => e.email));
 
         // Process the GitHub authentication (same logic as callback)
         console.log('🔄 Processing GitHub authentication...');
-        await processGitHubAuth(req, res, githubUser, githubEmails);
+        await processGitHubAuth(req, res, githubUser, githubEmails, isOrgMember);
 
     } catch (error) {
         console.error('Device flow polling error:', error);
@@ -322,8 +327,60 @@ router.post('/github/device/poll', async (req, res) => {
     }
 });
 
+// Helper function to check GitHub organization membership
+async function checkGitHubOrgMembership(accessToken, username) {
+    try {
+        const orgName = process.env.GITHUB_ORG_NAME;
+        if (!orgName) {
+            console.log('⚠️ No GITHUB_ORG_NAME configured, skipping org check');
+            return false;
+        }
+
+        console.log(`🔍 Checking if ${username} is member of ${orgName}...`);
+        
+        // Check organization membership using GitHub API
+        const response = await axios.get(`https://api.github.com/orgs/${orgName}/members/${username}`, {
+            headers: {
+                'Authorization': `token ${accessToken}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        // If we get here without error, user is a public member
+        console.log(`✅ ${username} is a public member of ${orgName}`);
+        return true;
+    } catch (error) {
+        if (error.response?.status === 404) {
+            console.log(`❌ ${username} is not a member of ${orgName} or membership is private`);
+            return false;
+        } else if (error.response?.status === 302) {
+            // 302 means user is a private member - we need to check differently
+            console.log(`🔍 ${username} might be a private member, checking with different approach...`);
+            try {
+                // Try to get user's organization memberships
+                const orgsResponse = await axios.get(`https://api.github.com/user/orgs`, {
+                    headers: {
+                        'Authorization': `token ${accessToken}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const isMember = orgsResponse.data.some(org => org.login === process.env.GITHUB_ORG_NAME);
+                console.log(`${isMember ? '✅' : '❌'} ${username} org membership confirmed: ${isMember}`);
+                return isMember;
+            } catch (orgsError) {
+                console.error('Error checking user organizations:', orgsError.message);
+                return false;
+            }
+        } else {
+            console.error('Error checking GitHub org membership:', error.message);
+            return false;
+        }
+    }
+}
+
 // Helper function for GitHub authentication processing
-async function processGitHubAuth(req, res, githubUser, githubEmails) {
+async function processGitHubAuth(req, res, githubUser, githubEmails, isOrgMember = false) {
     try {
         console.log('🔄 Processing GitHub auth for user:', githubUser.login);
         const db = req.app.locals.db;
@@ -343,8 +400,8 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
             console.log('✅ GitHub account already linked, logging in existing user');
             
             // Auto-complete first login if user already has study direction
-            let updateQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP';
-            let updateParams = [existingGithubUser.id];
+            let updateQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP, github_org_member = ?';
+            let updateParams = [isOrgMember, existingGithubUser.id];
             
             if (existingGithubUser.study_direction && !existingGithubUser.first_login_completed) {
                 console.log('🔧 Auto-completing first login for user with existing study direction');
@@ -435,9 +492,10 @@ async function processGitHubAuth(req, res, githubUser, githubEmails) {
              github_username = ?, 
              github_email = ?, 
              github_linked = TRUE,
+             github_org_member = ?,
              last_login = CURRENT_TIMESTAMP 
              WHERE id = ?`,
-            [githubId, githubUsername, githubEmails.find(e => e.primary)?.email || githubEmails[0]?.email, matchedUser.id]
+            [githubId, githubUsername, githubEmails.find(e => e.primary)?.email || githubEmails[0]?.email, isOrgMember, matchedUser.id]
         );
 
         // Get updated user
@@ -950,7 +1008,7 @@ router.get('/user', requireAuth, async (req, res) => {
         const db = req.app.locals.db;
         const user = await db.get(
             `SELECT id, username, email, email_verified, github_id, github_username, 
-                    github_linked, study_direction, is_admin, created_at, last_login,
+                    github_linked, github_org_member, study_direction, is_admin, created_at, last_login,
                     first_login_completed, avatar_url
              FROM users WHERE id = ?`,
             [req.user.id]

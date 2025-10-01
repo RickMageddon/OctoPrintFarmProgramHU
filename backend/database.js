@@ -33,7 +33,10 @@ class Database {
                         if (pragmaErr) {
                             console.error('Failed to enable foreign keys:', pragmaErr.message);
                         }
-                        this.initializeTables().then(resolve).catch(reject);
+                        this.initializeTables()
+                            .then(() => this.runMigrations())
+                            .then(resolve)
+                            .catch(reject);
                     });
                 }
             });
@@ -150,6 +153,27 @@ class Database {
                 [printer.id, printer.name, printer.url]
             );
         }
+    }
+
+    async runMigrations() {
+        console.log('Running database migrations...');
+        
+        // Migration 1: Add github_org_member column for organization membership tracking
+        try {
+            await this.run(`
+                ALTER TABLE users 
+                ADD COLUMN github_org_member BOOLEAN DEFAULT FALSE
+            `);
+            console.log('✅ Migration 1: Added github_org_member column');
+        } catch (error) {
+            if (error.message.includes('duplicate column name')) {
+                console.log('✅ Migration 1: github_org_member column already exists');
+            } else {
+                console.error('❌ Migration 1 failed:', error.message);
+            }
+        }
+        
+        console.log('Database migrations completed');
     }
 
     async get(sql, params = []) {
