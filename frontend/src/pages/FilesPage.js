@@ -126,14 +126,21 @@ const FilesPage = () => {
 
     const handleFavorite = async (fileId, isFavorite) => {
         try {
+            console.log(`[FAVORITE] Changing favorite status for file ${fileId}: ${isFavorite} -> ${!isFavorite}`);
+            
             if (isFavorite) {
+                console.log(`[FAVORITE] Removing favorite status for file ${fileId}`);
                 await axios.delete(`/api/files/${fileId}/favorite`);
             } else {
+                console.log(`[FAVORITE] Adding favorite status for file ${fileId}`);
                 await axios.post(`/api/files/${fileId}/favorite`);
             }
+            
+            console.log(`[FAVORITE] Success! Refreshing file list...`);
             fetchFiles(); // Refresh file list
         } catch (error) {
             console.error('Favorite error:', error);
+            console.error('Favorite error response:', error.response?.data);
             setError('Kon favoriet status niet wijzigen');
         }
     };

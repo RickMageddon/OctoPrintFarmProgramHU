@@ -74,10 +74,10 @@ router.get('/user', requireAuth, requireVerifiedEmail, async (req, res) => {
     try {
         const db = req.app.locals.db;
         const files = await db.all(
-            `SELECT id, filename, original_filename, file_size, upload_date 
+            `SELECT id, filename, original_filename, file_size, upload_date, is_favorite
              FROM user_favorites 
              WHERE user_id = ? 
-             ORDER BY upload_date DESC`,
+             ORDER BY is_favorite DESC, upload_date DESC`,
             [req.user.id]
         );
 
@@ -93,10 +93,10 @@ router.get('/favorites', requireAuth, requireVerifiedEmail, async (req, res) => 
     try {
         const db = req.app.locals.db;
         const favorites = await db.all(
-            `SELECT id, filename, original_filename, file_size, upload_date 
+            `SELECT id, filename, original_filename, file_size, upload_date, is_favorite
              FROM user_favorites 
              WHERE user_id = ? 
-             ORDER BY upload_date DESC`,
+             ORDER BY is_favorite DESC, upload_date DESC`,
             [req.user.id]
         );
 
