@@ -184,6 +184,105 @@ cron.schedule('*/30 * * * * *', async () => {
         await octoprintService.updateAllPrinterStatus();
         const printerStatus = await octoprintService.getAllPrinterStatus();
         io.emit('printer-status-update', printerStatus);
+
+        // Haal ook de monitor data op en emit deze
+        // Simuleer een express-like req/res voor monitor.js
+        const db = app.locals.db;
+        const octoprintService = app.locals.octoprintService;
+        let monitorData = {};
+        try {
+            // Get real printer status from OctoPrint
+            let printers = [];
+            try {
+                const printerStatuses = await octoprintService.getAllPrinterStatus();
+                printers = printerStatuses.map(printer => ({
+                    id: printer.id,
+                    name: printer.name,
+                    status: printer.state?.text?.toLowerCase() || 'offline',
+                    bed_temp: Math.round(printer.temperature?.bed?.actual || 0),
+                    hotend_temp: Math.round(printer.temperature?.tool0?.actual || 0),
+                    current_print_job: printer.job?.job?.file?.name || null,
+                    print_progress: Math.round(printer.job?.progress?.completion || 0),
+                    estimated_time_remaining: printer.job?.progress?.printTimeLeft ? Math.round(printer.job.progress.printTimeLeft / 60) : 0
+                }));
+            } catch (printerError) {
+                printers = [];
+            }
+
+            // Get queue data from database
+            let queue = [];
+            try {
+                queue = await db.all(`
+                    SELECT 
+                        q.id,
+                        q.filename,
+                        q.priority,
+                        q.estimated_time,
+                        q.status,
+                        q.created_at,
+                        u.username,
+                        u.study_direction
+                    FROM print_queue q
+                    LEFT JOIN users u ON q.user_id = u.id
+                    WHERE q.status IN ('queued', 'printing')
+                    ORDER BY 
+                        CASE q.priority 
+                            WHEN 'high' THEN 1 
+                            WHEN 'normal' THEN 2 
+                            WHEN 'low' THEN 3 
+                        END,
+                        q.created_at ASC
+                    LIMIT 10
+                `);
+            } catch (queueError) {
+                queue = [];
+            }
+
+            // Get statistics from database
+            let stats = null;
+            try {
+                stats = await db.get(`
+                    SELECT 
+                        COUNT(*) as total_prints_month,
+                        AVG(CASE WHEN status = 'completed' THEN 1.0 ELSE 0.0 END) * 100 as success_rate,
+                        SUM(CASE WHEN status = 'completed' THEN print_time ELSE 0 END) as total_print_time_month
+                    FROM print_queue 
+                    WHERE created_at >= date('now', '-1 month')
+                `);
+            } catch (statsError) {
+                stats = null;
+            }
+
+            const activePrinters = printers.filter(p => p.status === 'printing').length;
+            const totalPrinters = printers.length || 3;
+
+            monitorData = {
+                printers: printers.length > 0 ? printers : [
+                    { id: 1, name: 'Prusa Printer 1', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 },
+                    { id: 2, name: 'Prusa Printer 2', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 },
+                    { id: 3, name: 'Prusa Printer 3', status: 'offline', bed_temp: 0, hotend_temp: 0, current_print_job: null, print_progress: 0, estimated_time_remaining: 0 }
+                ],
+                queue: queue.map(item => ({
+                    ...item,
+                    user: {
+                        username: item.username || 'Unknown',
+                        study_direction: item.study_direction || 'Unknown'
+                    }
+                })),
+                stats: {
+                    total_prints_month: stats?.total_prints_month || 0,
+                    active_printers: activePrinters,
+                    total_printers: totalPrinters,
+                    queue_length: queue.length,
+                    success_rate: Math.round(stats?.success_rate || 0),
+                    total_print_time_month: Math.round((stats?.total_print_time_month || 0) / 60)
+                },
+                last_updated: new Date().toISOString()
+            };
+        } catch (err) {
+            monitorData = {};
+        }
+        io.emit('monitor-update', monitorData);
     } catch (error) {
         console.error('Error updating printer status:', error);
     }

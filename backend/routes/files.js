@@ -132,52 +132,35 @@ router.post('/upload', requireAuth, requireVerifiedEmail, upload.single('file'),
         const db = req.app.locals.db;
         const octoprintService = req.app.locals.octoprintService;
 
-        // Check current favorites count
-        const currentCount = await db.get(
-            'SELECT COUNT(*) as count FROM user_favorites WHERE user_id = ?',
+        // Get all files for this user
+        const userFiles = await db.all(
+            'SELECT id, filename, original_filename, file_path, is_favorite, upload_date FROM user_favorites WHERE user_id = ? ORDER BY upload_date ASC',
             [req.user.id]
         );
 
-        let favoriteToReplace = null;
+        // Count favorites and non-favorites
+        const favorites = userFiles.filter(f => f.is_favorite);
+        const nonFavorites = userFiles.filter(f => !f.is_favorite);
 
-        if (currentCount.count >= 15) {
-            // Get oldest favorite for potential replacement
-            favoriteToReplace = await db.get(
-                `SELECT id, filename, original_filename, file_path 
-                 FROM user_favorites 
-                 WHERE user_id = ? 
-                 ORDER BY upload_date ASC 
-                 LIMIT 1`,
-                [req.user.id]
-            );
-
-            // If replaceId is provided, use that specific favorite
-            if (req.body.replaceId) {
-                const specificFavorite = await db.get(
-                    `SELECT id, filename, original_filename, file_path 
-                     FROM user_favorites 
-                     WHERE user_id = ? AND id = ?`,
-                    [req.user.id, req.body.replaceId]
-                );
-
-                if (specificFavorite) {
-                    favoriteToReplace = specificFavorite;
-                } else {
-                    return res.status(400).json({ error: 'Invalid favorite to replace' });
+        // Enforce: max 10 files, but up to 5 favorites are always protected
+        if (userFiles.length >= 10) {
+            if (nonFavorites.length > 0) {
+                // Delete the oldest non-favorite
+                const oldestNonFavorite = nonFavorites[0];
+                await db.run('DELETE FROM user_favorites WHERE id = ?', [oldestNonFavorite.id]);
+                // Delete the file from disk
+                try {
+                    await fs.unlink(oldestNonFavorite.file_path);
+                } catch (error) {
+                    console.error('Error deleting old file:', error);
                 }
-            }
-
-            if (!favoriteToReplace) {
-                return res.status(400).json({ 
-                    error: 'Maximum favorites reached. Please specify which favorite to replace.',
-                    needsReplacement: true,
-                    favorites: await db.all(
-                        `SELECT id, filename, original_filename, upload_date 
-                         FROM user_favorites 
-                         WHERE user_id = ? 
-                         ORDER BY upload_date DESC`,
-                        [req.user.id]
-                    )
+            } else if (favorites.length < 5) {
+                // Should not happen, but fallback: allow upload if less than 5 favorites
+            } else {
+                // All files are favorites and 5 or more: reject upload
+                return res.status(400).json({
+                    error: 'Je hebt het maximum aantal van 5 favoriete bestanden bereikt. Verwijder of ont-favoriet een bestand om ruimte te maken voor nieuwe uploads.',
+                    favorites: favorites.map(f => ({ id: f.id, original_filename: f.original_filename, upload_date: f.upload_date }))
                 });
             }
         }

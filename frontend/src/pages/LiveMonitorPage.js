@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSocket } from '../contexts/SocketContext';
 
 const LiveMonitorPage = () => {
     const [monitorData, setMonitorData] = useState({
@@ -17,6 +18,7 @@ const LiveMonitorPage = () => {
     });
     const [loading, setLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const { socket } = useSocket();
 
     // Fetch data from backend
     const fetchMonitorData = async () => {
@@ -33,20 +35,28 @@ const LiveMonitorPage = () => {
 
     useEffect(() => {
         fetchMonitorData();
-        
-        // Update data every 30 seconds
-        const dataInterval = setInterval(fetchMonitorData, 30000);
-        
+
         // Update timestamp every second
         const timeInterval = setInterval(() => {
             setCurrentTime(new Date());
         }, 1000);
 
+        // Luister naar live updates via socket
+        if (socket) {
+            const handleMonitorUpdate = (data) => {
+                setMonitorData(data);
+                setLoading(false);
+            };
+            socket.on('monitor-update', handleMonitorUpdate);
+        }
+
         return () => {
-            clearInterval(dataInterval);
             clearInterval(timeInterval);
+            if (socket) {
+                socket.off('monitor-update');
+            }
         };
-    }, []);
+    }, [socket]);
 
     const getStatusClass = (status) => {
         if (!status) return 'offline';
