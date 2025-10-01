@@ -2,6 +2,19 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 class Database {
+    // Helper om SQL-statements asynchroon uit te voeren
+    async run(sql, params = []) {
+        return new Promise((resolve, reject) => {
+            this.db.run(sql, params, function (err) {
+                if (err) {
+                    console.error('Database error:', err.message);
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID, changes: this.changes });
+                }
+            });
+        });
+    }
     constructor(dbPath = './database/database.db') {
         this.dbPath = dbPath;
         this.db = null;
