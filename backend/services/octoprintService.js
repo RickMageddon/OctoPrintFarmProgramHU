@@ -395,22 +395,24 @@ class OctoPrintService {
                 return; // No jobs in queue
             }
 
-            console.log(`📋 Found queued job: ${queuedJob.filename} for printer ${queuedJob.printer_id}`);
+            console.log(`📋 Found queued job: ${queuedJob.filename} for printer ${queuedJob.printer_id} (user: ${queuedJob.username})`);
 
             // Check if printer is available
             const printerStatus = await this.getPrinterStatus(queuedJob.printer_id);
-            console.log(`🖨️ Printer ${queuedJob.printer_id} status:`, printerStatus.state?.text);
+            console.log(`🖨️ Printer ${queuedJob.printer_id} status: "${printerStatus.state?.text}", hasActiveJob: ${!!printerStatus.job?.job?.file?.name}`);
             
             if (printerStatus.state?.text === 'Operational' && !printerStatus.job?.job?.file?.name) {
                 // Printer is available, start the job
-                console.log(`✅ Printer ${queuedJob.printer_id} is available, starting job`);
+                console.log(`✅ Printer ${queuedJob.printer_id} is available, starting job...`);
                 try {
+                    console.log(`📤 Uploading file: ${queuedJob.file_path} -> ${queuedJob.filename}`);
                     await this.uploadFile(
                         queuedJob.printer_id, 
                         queuedJob.file_path, 
                         queuedJob.filename
                     );
                     
+                    console.log(`🖨️ Starting print: ${queuedJob.filename} on printer ${queuedJob.printer_id}`);
                     await this.startPrint(queuedJob.printer_id, queuedJob.filename);
                     
                     // Update job status
@@ -422,7 +424,7 @@ class OctoPrintService {
                         [queuedJob.id]
                     );
 
-                    console.log(`✅ Started print job ${queuedJob.id} on printer ${queuedJob.printer_id}`);
+                    console.log(`✅ Successfully started print job ${queuedJob.id} (${queuedJob.filename}) on printer ${queuedJob.printer_id}`);
                 } catch (error) {
                     // Mark job as failed
                     await this.db.run(
@@ -432,13 +434,10 @@ class OctoPrintService {
                         [queuedJob.id]
                     );
                     
-                    console.error(`❌ Failed to start print job ${queuedJob.id}:`, error);
+                    console.error(`❌ Failed to start print job ${queuedJob.id} (${queuedJob.filename}):`, error.message);
                 }
             } else {
-                console.log(`⏳ Printer ${queuedJob.printer_id} not available:`, {
-                    state: printerStatus.state?.text,
-                    hasActiveJob: !!printerStatus.job?.job?.file?.name
-                });
+                console.log(`⏳ Printer ${queuedJob.printer_id} not available (state: "${printerStatus.state?.text}", hasActiveJob: ${!!printerStatus.job?.job?.file?.name})`);
             }
         } catch (error) {
             console.error('❌ Error processing queue:', error);

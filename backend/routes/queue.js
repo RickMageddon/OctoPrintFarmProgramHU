@@ -226,6 +226,23 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
             });
         }
 
+        // Trigger immediate queue processing
+        try {
+            console.log('🚀 Triggering immediate queue processing after job add...');
+            const octoprintService = req.app.locals.octoprintService;
+            if (octoprintService && global.autoProcessingEnabled) {
+                setTimeout(async () => {
+                    try {
+                        await octoprintService.processQueue();
+                    } catch (error) {
+                        console.error('Error in immediate queue processing:', error);
+                    }
+                }, 1000); // Wait 1 second then process
+            }
+        } catch (error) {
+            console.warn('Could not trigger immediate processing:', error);
+        }
+
         res.json({
             success: true,
             jobId: result.lastID,
