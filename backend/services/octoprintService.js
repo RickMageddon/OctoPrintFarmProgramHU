@@ -203,9 +203,39 @@ class OctoPrintService {
 
             const client = this.createClient(printer);
             
+            // Cancel the current print job
             await client.post('/api/job', {
                 command: 'cancel'
             });
+
+            console.log(`🛑 Print cancelled on printer ${printerId}`);
+
+            // Wait a moment for the cancel to take effect
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Clear any remaining job information by deselecting the file
+            try {
+                await client.post('/api/files/local', {
+                    command: 'deselect'
+                });
+                console.log(`🗑️ Job cleared from printer ${printerId}`);
+            } catch (clearError) {
+                console.warn(`⚠️ Could not clear job from printer ${printerId}:`, clearError.message);
+                // This is not critical, the cancel command should be enough
+            }
+
+            // Update database to mark any printing jobs as cancelled
+            if (this.db) {
+                try {
+                    await this.db.run(
+                        'UPDATE print_queue SET status = ?, completed_at = ? WHERE printer_id = ? AND status = ?',
+                        ['cancelled', new Date().toISOString(), printerId, 'printing']
+                    );
+                    console.log(`📝 Updated database status for printer ${printerId}`);
+                } catch (dbError) {
+                    console.warn(`⚠️ Could not update database for printer ${printerId}:`, dbError.message);
+                }
+            }
 
             return { success: true, message: `Print cancelled on ${printer.name}` };
         } catch (error) {
