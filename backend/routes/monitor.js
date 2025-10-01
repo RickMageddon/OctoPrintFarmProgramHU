@@ -40,24 +40,33 @@ router.get('/data', async (req, res) => {
         // Get real printer status from OctoPrint
         let printers = [];
         try {
+            console.log('[MONITOR] Fetching printer status from OctoPrint services...');
             const printerStatuses = await octoprintService.getAllPrinterStatus();
-            printers = printerStatuses.map(printer => ({
-                id: printer.id,
-                name: printer.name,
-                status: printer.state?.text?.toLowerCase() || 'offline',
-                bed_temp: Math.round(printer.temperature?.bed?.actual || 0),
-                hotend_temp: Math.round(printer.temperature?.tool0?.actual || 0),
-                current_print_job: printer.job?.job?.file?.name || null,
-                print_progress: Math.round(printer.job?.progress?.completion || 0),
-                estimated_time_remaining: printer.job?.progress?.printTimeLeft ? Math.round(printer.job.progress.printTimeLeft / 60) : 0
-            }));
+            console.log('[MONITOR] Got printer statuses:', printerStatuses.length, 'printers');
+            
+            printers = printerStatuses.map(printer => {
+                const mappedPrinter = {
+                    id: printer.id,
+                    name: printer.name,
+                    status: printer.state?.text?.toLowerCase() || 'offline',
+                    bed_temp: Math.round(printer.temperature?.bed?.actual || 0),
+                    hotend_temp: Math.round(printer.temperature?.tool0?.actual || 0),
+                    current_print_job: printer.job?.job?.file?.name || null,
+                    print_progress: Math.round(printer.job?.progress?.completion || 0),
+                    estimated_time_remaining: printer.job?.progress?.printTimeLeft ? Math.round(printer.job.progress.printTimeLeft / 60) : 0
+                };
+                console.log(`[MONITOR] Printer ${printer.id}: ${mappedPrinter.status}, ${mappedPrinter.hotend_temp}°C, ${mappedPrinter.print_progress}%`);
+                return mappedPrinter;
+            });
         } catch (printerError) {
-            console.warn('Failed to get printer status, using demo data:', printerError.message);
+            console.warn('[MONITOR] Failed to get printer status, using demo data:', printerError.message);
+            console.warn('[MONITOR] Error details:', printerError);
         }
 
         // Get queue data from database
         let queue = [];
         try {
+            console.log('[MONITOR] Fetching queue data from database...');
             queue = await db.all(`
                 SELECT 
                     q.id,
@@ -80,8 +89,9 @@ router.get('/data', async (req, res) => {
                     q.created_at ASC
                 LIMIT 10
             `);
+            console.log('[MONITOR] Got queue data:', queue.length, 'items');
         } catch (queueError) {
-            console.warn('Failed to get queue data:', queueError.message);
+            console.warn('[MONITOR] Failed to get queue data:', queueError.message);
             queue = [];
         }
 
