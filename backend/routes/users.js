@@ -1,55 +1,3 @@
-// Pauzeer een gebruiker (admin only)
-router.post('/:id/pause', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
-    try {
-        const userId = parseInt(req.params.id);
-        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
-        const db = req.app.locals.db;
-        await db.run('UPDATE users SET paused = 1 WHERE id = ?', [userId]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to pause user' });
-    }
-});
-
-// Blokkeer een gebruiker (admin only)
-router.post('/:id/block', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
-    try {
-        const userId = parseInt(req.params.id);
-        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
-        const db = req.app.locals.db;
-        await db.run('UPDATE users SET blocked = 1 WHERE id = ?', [userId]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to block user' });
-    }
-});
-
-// Warning plaatsen voor gebruiker (admin only)
-router.post('/:id/warning', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
-    try {
-        const userId = parseInt(req.params.id);
-        const { text } = req.body;
-        if (isNaN(userId) || !text) return res.status(400).json({ error: 'Invalid user ID or text' });
-        const db = req.app.locals.db;
-        await db.run('UPDATE users SET warning = ? WHERE id = ?', [text, userId]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to set warning' });
-    }
-});
-
-// GitHub login resetten (admin only)
-router.post('/:id/reset-github', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
-    try {
-        const userId = parseInt(req.params.id);
-        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
-        const db = req.app.locals.db;
-        await db.run('UPDATE users SET github_id = NULL, github_username = NULL, github_email = NULL, github_linked = 0 WHERE id = ?', [userId]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to reset GitHub login' });
-    }
-});
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -782,6 +730,87 @@ router.get('/admin/stats', requireAuth, requireVerifiedEmail, requireAdmin, asyn
     } catch (error) {
         console.error('Error getting system stats:', error);
         res.status(500).json({ error: 'Failed to get system statistics' });
+    }
+});
+
+// Pause user account (admin only)
+router.post('/:id/pause', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET paused = 1 WHERE id = ?', [userId]);
+        
+        console.log(`Admin paused user ${userId}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error pausing user:', error);
+        res.status(500).json({ error: 'Failed to pause user' });
+    }
+});
+
+// Block user account (admin only)
+router.post('/:id/block', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET blocked = 1 WHERE id = ?', [userId]);
+        
+        console.log(`Admin blocked user ${userId}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        res.status(500).json({ error: 'Failed to block user' });
+    }
+});
+
+// Set warning message for user (admin only)
+router.post('/:id/warning', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { text } = req.body;
+        
+        if (isNaN(userId) || !text) {
+            return res.status(400).json({ error: 'Invalid user ID or text' });
+        }
+        
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET warning = ? WHERE id = ?', [text, userId]);
+        
+        console.log(`Admin set warning for user ${userId}: ${text}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error setting warning:', error);
+        res.status(500).json({ error: 'Failed to set warning' });
+    }
+});
+
+// Reset GitHub login (admin only)
+router.post('/:id/reset-github', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        if (isNaN(userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        
+        const db = req.app.locals.db;
+        await db.run(
+            'UPDATE users SET github_id = NULL, github_username = NULL, github_email = NULL, github_linked = 0 WHERE id = ?',
+            [userId]
+        );
+        
+        console.log(`Admin reset GitHub login for user ${userId}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error resetting GitHub login:', error);
+        res.status(500).json({ error: 'Failed to reset GitHub login' });
     }
 });
 

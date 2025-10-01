@@ -1,38 +1,3 @@
-// Verwijder printjob uit de wachtrij (admin only)
-router.delete('/:id', requireAuth, async (req, res) => {
-    try {
-        if (!req.user.is_admin) return res.status(403).json({ error: 'Admin privileges required' });
-        const jobId = parseInt(req.params.id);
-        if (isNaN(jobId)) return res.status(400).json({ error: 'Invalid job ID' });
-        const db = req.app.locals.db;
-        await db.run('DELETE FROM print_queue WHERE id = ?', [jobId]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to delete print job' });
-    }
-});
-
-// Verander volgorde van printjob (admin only)
-router.post('/:id/move', requireAuth, async (req, res) => {
-    try {
-        if (!req.user.is_admin) return res.status(403).json({ error: 'Admin privileges required' });
-        const jobId = parseInt(req.params.id);
-        const { direction } = req.body; // 'up' of 'down'
-        if (isNaN(jobId) || !['up','down'].includes(direction)) return res.status(400).json({ error: 'Invalid params' });
-        const db = req.app.locals.db;
-        // Simpele implementatie: wissel priority met vorige/volgende job
-        const job = await db.get('SELECT id, priority FROM print_queue WHERE id = ?', [jobId]);
-        if (!job) return res.status(404).json({ error: 'Job not found' });
-        const comp = await db.get(`SELECT id, priority FROM print_queue WHERE id != ? AND status = 'queued' ORDER BY priority DESC, created_at ASC`, [jobId]);
-        if (!comp) return res.status(404).json({ error: 'No job to swap with' });
-        // Wissel priority
-        await db.run('UPDATE print_queue SET priority = ? WHERE id = ?', [comp.priority, jobId]);
-        await db.run('UPDATE print_queue SET priority = ? WHERE id = ?', [job.priority, comp.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to move print job' });
-    }
-});
 const express = require('express');
 const router = express.Router();
 
@@ -584,6 +549,77 @@ router.get('/auto-processing/status', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error getting auto-processing status:', error);
         res.status(500).json({ error: 'Failed to get auto-processing status' });
+    }
+});
+
+// Delete print job from queue (admin only)
+router.delete('/:id', requireAuth, async (req, res) => {
+    try {
+        if (!req.user.is_admin) {
+            return res.status(403).json({ error: 'Admin privileges required' });
+        }
+        
+        const jobId = parseInt(req.params.id);
+        if (isNaN(jobId)) {
+            return res.status(400).json({ error: 'Invalid job ID' });
+        }
+        
+        const db = req.app.locals.db;
+        await db.run('DELETE FROM print_queue WHERE id = ?', [jobId]);
+        
+        console.log(`Admin deleted print job ${jobId}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting print job:', error);
+        res.status(500).json({ error: 'Failed to delete print job' });
+    }
+});
+
+// Move print job in queue (admin only)
+router.post('/:id/move', requireAuth, async (req, res) => {
+    try {
+        if (!req.user.is_admin) {
+            return res.status(403).json({ error: 'Admin privileges required' });
+        }
+        
+        const jobId = parseInt(req.params.id);
+        const { direction } = req.body; // 'up' or 'down'
+        
+        if (isNaN(jobId) || !['up', 'down'].includes(direction)) {
+            return res.status(400).json({ error: 'Invalid params' });
+        }
+        
+        const db = req.app.locals.db;
+        
+        // Get current job
+        const job = await db.get('SELECT id, priority FROM print_queue WHERE id = ? AND status = ?', [jobId, 'queued']);
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found or not queued' });
+        }
+        
+        // Get job to swap with based on direction
+        const operator = direction === 'up' ? '>' : '<';
+        const order = direction === 'up' ? 'ASC' : 'DESC';
+        const swapJob = await db.get(
+            `SELECT id, priority FROM print_queue 
+             WHERE status = 'queued' AND priority ${operator} ? 
+             ORDER BY priority ${order} LIMIT 1`,
+            [job.priority]
+        );
+        
+        if (!swapJob) {
+            return res.status(400).json({ error: 'Cannot move job in that direction' });
+        }
+        
+        // Swap priorities
+        await db.run('UPDATE print_queue SET priority = ? WHERE id = ?', [swapJob.priority, jobId]);
+        await db.run('UPDATE print_queue SET priority = ? WHERE id = ?', [job.priority, swapJob.id]);
+        
+        console.log(`Admin moved job ${jobId} ${direction}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error moving print job:', error);
+        res.status(500).json({ error: 'Failed to move print job' });
     }
 });
 
