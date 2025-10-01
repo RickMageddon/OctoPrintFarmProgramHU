@@ -72,9 +72,11 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
         const { favoriteId, fileId, printerId, printer, priority = 0 } = req.body;
         
         // Accept either favoriteId/fileId for flexibility
-        const actualFavoriteId = favoriteId || fileId;
+        const actualFileId = favoriteId || fileId;
+        console.log(`[QUEUE] Add request - favoriteId: ${favoriteId}, fileId: ${fileId}, actualFileId: ${actualFileId}`);
         
-        if (!actualFavoriteId) {
+        if (!actualFileId) {
+            console.log('[QUEUE] Error: No file ID provided');
             return res.status(400).json({ error: 'File ID is required' });
         }
 
@@ -130,16 +132,29 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
             return res.status(400).json({ error: 'Invalid printer ID' });
         }
 
-        // Get the favorite file
-        const favorite = await db.get(
+        // Get the file - try both user_favorites and user_files tables
+        let fileData = await db.get(
             `SELECT filename, original_filename, file_path, file_size 
              FROM user_favorites 
              WHERE id = ? AND user_id = ?`,
-            [actualFavoriteId, req.user.id]
+            [actualFileId, req.user.id]
         );
 
-        if (!favorite) {
-            return res.status(404).json({ error: 'Favorite file not found' });
+        // If not found in favorites, try user_files table
+        if (!fileData) {
+            fileData = await db.get(
+                `SELECT filename, original_filename, file_path, file_size 
+                 FROM user_files 
+                 WHERE id = ? AND user_id = ?`,
+                [actualFileId, req.user.id]
+            );
+        }
+
+        console.log(`[QUEUE] File lookup result:`, fileData ? 'Found' : 'Not found');
+
+        if (!fileData) {
+            console.log(`[QUEUE] Error: File ${actualFileId} not found for user ${req.user.id}`);
+            return res.status(404).json({ error: 'File not found' });
         }
 
         // Check if user already has a job in queue for this printer
@@ -157,7 +172,7 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
 
 
         // Estimate print time
-        const estimatedTime = octoprintService.estimatePrintTime(favorite.file_size);
+        const estimatedTime = octoprintService.estimatePrintTime(fileData.file_size);
 
         // Check if print fits before 20:00
         const now = new Date();
@@ -178,8 +193,8 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
             [
                 req.user.id,
                 actualPrinterId,
-                favorite.original_filename,
-                favorite.file_path,
+                fileData.original_filename,
+                fileData.file_path,
                 priority,
                 estimatedTime
             ]
@@ -193,7 +208,7 @@ router.post('/add', requireAuth, requireVerifiedEmail, async (req, res) => {
                 [
                     req.user.id,
                     'job_queued',
-                    `Queued ${favorite.original_filename} for printer ${actualPrinterId}`,
+                    `Queued ${fileData.original_filename} for printer ${actualPrinterId}`,
                     req.ip || '127.0.0.1'
                 ]
             );

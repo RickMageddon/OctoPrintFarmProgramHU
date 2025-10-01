@@ -20,7 +20,8 @@ import {
     Chip,
     Alert,
     LinearProgress,
-    Paper
+    Paper,
+    Snackbar
 } from '@mui/material';
 import {
     CloudUpload,
@@ -48,6 +49,7 @@ const FilesPage = () => {
     const [deleteDialog, setDeleteDialog] = useState({ open: false, fileId: null, fileName: '' });
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     const fileInputRef = useRef();
 
     // Fetch user's uploaded files
@@ -58,9 +60,19 @@ const FilesPage = () => {
             const response = await axios.get('/api/files/user');
             console.log('[FILES] Response received:', response.data);
             console.log('[FILES] Files array:', response.data.files);
-            setFiles(response.data.files || []);
+            
+            const filesArray = response.data.files || [];
+            console.log('[FILES] Processing', filesArray.length, 'files');
+            
+            // Log each file's favorite status
+            filesArray.forEach(file => {
+                console.log(`[FILES] File ${file.id}: ${file.original_filename || file.filename}, is_favorite: ${file.is_favorite}`);
+            });
+            
+            setFiles(filesArray);
         } catch (error) {
             console.error('Error fetching files:', error);
+            console.error('Error response:', error.response?.data);
             setError('Kon bestanden niet laden');
             setFiles([]);
         } finally {
@@ -133,31 +145,57 @@ const FilesPage = () => {
             
             if (isFavorite) {
                 console.log(`[FAVORITE] Removing favorite status for file ${fileId}`);
-                await axios.delete(`/api/files/${fileId}/favorite`);
+                const response = await axios.delete(`/api/files/${fileId}/favorite`);
+                console.log(`[FAVORITE] Delete response:`, response.data);
             } else {
                 console.log(`[FAVORITE] Adding favorite status for file ${fileId}`);
-                await axios.post(`/api/files/${fileId}/favorite`);
+                const response = await axios.post(`/api/files/${fileId}/favorite`);
+                console.log(`[FAVORITE] Post response:`, response.data);
             }
             
             console.log(`[FAVORITE] Success! Refreshing file list...`);
-            fetchFiles(); // Refresh file list
+            
+            // Update the local state immediately for better UX
+            setFiles(prevFiles => prevFiles.map(file => 
+                file.id === fileId 
+                    ? { ...file, is_favorite: !isFavorite }
+                    : file
+            ).sort((a, b) => {
+                // Sort favorites first
+                if (a.is_favorite && !b.is_favorite) return -1;
+                if (!a.is_favorite && b.is_favorite) return 1;
+                return 0;
+            }));
+            
+            // Also fetch fresh data from server
+            await fetchFiles();
         } catch (error) {
             console.error('Favorite error:', error);
             console.error('Favorite error response:', error.response?.data);
-            setError('Kon favoriet status niet wijzigen');
+            setError(`Kon favoriet status niet wijzigen: ${error.response?.data?.error || error.message}`);
+            
+            // Revert local state on error
+            fetchFiles();
         }
     };
 
     const handlePrint = async (fileId) => {
         try {
-            await axios.post('/api/queue/add', {
-                favoriteId: fileId, // Use favoriteId instead of fileId to match backend expectation
+            console.log(`[PRINT] Adding file ${fileId} to print queue...`);
+            const payload = {
+                fileId: fileId, // Changed from favoriteId to fileId for clarity
                 priority: 'normal'
-            });
-            alert('Bestand toegevoegd aan print wachtrij!');
+            };
+            console.log(`[PRINT] Sending payload:`, payload);
+            
+            const response = await axios.post('/api/queue/add', payload);
+            console.log(`[PRINT] Success response:`, response.data);
+            setSuccessMessage('Bestand succesvol toegevoegd aan print wachtrij!');
         } catch (error) {
             console.error('Print error:', error);
-            setError('Kon bestand niet toevoegen aan wachtrij');
+            console.error('Print error response:', error.response?.data);
+            console.error('Print error status:', error.response?.status);
+            setError(`Kon bestand niet toevoegen aan wachtrij: ${error.response?.data?.error || error.message}`);
         }
     };
 
@@ -400,6 +438,23 @@ const FilesPage = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Success Message Snackbar */}
+            <Snackbar
+                open={!!successMessage}
+                autoHideDuration={4000}
+                onClose={() => setSuccessMessage('')}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={() => setSuccessMessage('')} 
+                    severity="success" 
+                    sx={{ width: '100%' }}
+                    variant="filled"
+                >
+                    {successMessage}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 };
