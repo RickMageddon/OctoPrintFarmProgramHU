@@ -1,0 +1,648 @@
+# OctoPrint Farm - Admin Panel Features TODO
+## Status: Dashboard tab toegevoegd, rest nog te implementeren
+
+---
+
+## ⚠️ PRIORITEIT BUGS (Fix eerst!)
+
+### 🚨 KRITIEK: OctoPrint SerialException tijdens printen
+- [ ] **OctoPrint verliest seriële verbinding tijdens print**
+  - **Error:** `SerialException: device reports readiness to read but returned no data (device disconnected or multiple access on port?)`
+  - **Impact:** Print wordt afgekapt, materiaal verspild, gebruiker gefrustreerd
+  - **Wanneer:** Tijdens actieve print job
+  - **Status na error:** `State: Offline after error`
+  
+  **Mogelijke oorzaken:**
+  1. **USB power management** - USB poort wordt in sleep mode gezet
+  2. **Multiple access** - Meerdere processes proberen serial port te lezen
+  3. **Docker container issues** - USB device niet persistent gemount
+  4. **Kabel/hardware** - Losse USB kabel of defecte USB hub
+  5. **OctoPrint plugins** - Plugin interfereert met serial communication
+  6. **Kernel driver** - Linux USB driver issues (buffer overflow, timing)
+  
+  **Debugging stappen:**
+  - [ ] Check OctoPrint logs: `/home/pi/.octoprint/logs/serial.log`
+  - [ ] Check dmesg voor USB disconnects: `dmesg | grep -i usb`
+  - [ ] Check welke process serial port gebruikt: `lsof | grep ttyUSB` of `fuser /dev/ttyUSB0`
+  - [ ] Monitor USB power: `cat /sys/bus/usb/devices/*/power/level`
+  - [ ] Check Docker device mapping in docker-compose.yml
+  
+  **Oplossingen om te proberen:**
+  
+  **1. Disable USB Autosuspend** (MEEST WAARSCHIJNLIJK)
+  ```bash
+  # Op mini PC (host):
+  # Check current USB power settings
+  cat /sys/module/usbcore/parameters/autosuspend
+  
+  # Disable USB autosuspend permanent
+  echo -1 > /sys/module/usbcore/parameters/autosuspend
+  
+  # Of via kernel parameter (persistent):
+  # Edit /boot/cmdline.txt (Raspberry Pi) of /etc/default/grub
+  # Add: usbcore.autosuspend=-1
+  
+  # Disable voor specifieke USB device:
+  echo 'on' > /sys/bus/usb/devices/1-1/power/level
+  
+  # Maak permanent via udev rule:
+  # /etc/udev/rules.d/50-usb-power.rules
+  ACTION=="add", SUBSYSTEM=="usb", ATTR{power/control}="on"
+  ```
+  
+  **2. Fix Docker USB Device Mapping**
+  ```yaml
+  # docker-compose.yml voor OctoPrint
+  services:
+    octoprint:
+      devices:
+        - /dev/ttyUSB0:/dev/ttyUSB0  # Of ttyACM0
+      privileged: true  # Geeft container volledige device access
+      # Of specifiek:
+      device_cgroup_rules:
+        - 'c 188:* rmw'  # USB serial devices
+  ```
+  
+  **3. OctoPrint Serial Settings**
+  - [ ] Settings → Serial Connection → Intervals & Timeouts
+    - Verhoog "Communication timeout": van 2s naar 10s
+    - Verhoog "Wait for start": van 1s naar 5s
+    - Enable "Log serial communication"
+  - [ ] Settings → Serial Connection → Firmware & Protocol
+    - Test verschillende baudrates (115200 vs 250000)
+    - Enable "Always send checksum"
+  - [ ] Settings → Serial Connection → Behaviour
+    - Disable "Sanity check tools" tijdelijk
+  
+  **4. Check Conflicting Plugins**
+  - [ ] Disable plugins één voor één om te testen:
+    - PrintTimeGenius (gebruikt serial data)
+    - Любые monitoring plugins
+    - Telegram/Discord notifiers (als ze serial polling doen)
+  - [ ] Check installed plugins: Settings → Plugin Manager
+  
+  **5. Hardware Check**
+  - [ ] Test andere USB kabel (kortere = beter, max 1.5m)
+  - [ ] Test andere USB poort op mini PC (gebruik USB 2.0, niet 3.0)
+  - [ ] Gebruik powered USB hub als meerdere printers op 1 PC
+  - [ ] Check printer power supply (voltage drops kunnen serial reset veroorzaken)
+  
+  **6. Kernel/System Level**
+  ```bash
+  # Verhoog USB buffer size
+  echo 4096 > /sys/module/usbserial/parameters/buffer_size
+  
+  # Check voor kernel errors
+  dmesg -w  # Monitor real-time tijdens print
+  
+  # Install USB monitoring tools
+  sudo apt-get install usbutils
+  lsusb -t  # USB device tree
+  usb-devices  # Detailed USB info
+  ```
+  
+  **7. OctoPrint Auto-reconnect**
+  - [ ] Settings → Serial Connection → Behaviour
+    - Enable "Automatically connect on server startup"
+    - Enable "Auto-connect on communication error" (experimental!)
+  
+  **Monitoring implementeren:**
+  - [ ] Setup alerting wanneer printer offline gaat
+  - [ ] Log serial errors naar centrale database
+  - [ ] Email/push notification naar admin bij disconnect
+  - [ ] Auto-retry connection X keer voordat abort
+  
+  **Testing:**
+  - [ ] Start test print en monitor serial.log real-time
+  - [ ] Run `dmesg -w` in parallel tijdens print
+  - [ ] Check of error reproduceerbaar is
+  - [ ] Test met verschillende printers om te zien of het printer-specifiek is
+  
+  **Documentatie:**
+  - [ ] Document oplossing die werkt
+  - [ ] Voeg toe aan troubleshooting guide
+  - [ ] Train users over wat te doen bij disconnect
+
+---
+
+- [ ] **Avatar upload fixen**
+  - BUG: Upload lukt, maar avatar wordt niet gekoppeld aan gebruiker
+  - Avatar URL wordt niet opgeslagen in database (users.avatar_url)
+  - Check backend upload endpoint: moet avatar_url updaten in DB
+  - Check frontend: moet avatar_url opslaan in user object na upload
+  - Ensure avatar wordt getoond in navbar na upload
+  - Test: Upload → Refresh → Avatar moet zichtbaar blijven
+- [ ] **OctoPrint API data verbeteren**
+  - Haal meer accurate data op van OctoPrint API
+  - Implementeer real-time temperature monitoring
+  - Verbeter print progress accuracy
+  - Integreer webcam feeds
+  - Haal filament sensor data op (indien beschikbaar)
+- [ ] **Sonoff 4CH Pro R3 GPIO besturing via Admin Panel**
+  - Admin kan printers aan/uit zetten via GPIO pins
+  - Integreer met bestaande sonoff_scheduler.py script
+  - UI controls in admin panel (per printer on/off toggle)
+  - Status indicator (aan/uit) voor elke printer
+  - Safety: Bevestiging dialog voordat printer uit wordt gezet
+  - Log alle power on/off acties in audit trail
+  - Optioneel: Schedule automatic power off na X minuten inactiviteit
+
+---
+
+## ✅ VOLTOOID
+- [x] Dashboard/Stats tab - Systeem overzicht met user stats, job stats, recent activity
+- [x] Waarschuwing tonen bij login (alert popup)
+- [x] Details/logs dialog voor users
+- [x] Pause/Unpause toggle (met kleuren)
+- [x] Block/Unblock toggle (met kleuren)
+- [x] Admin button in navbar voor org members
+
+---
+
+## 🔥 HOGE PRIORITEIT
+
+### 2. Filtering & Sortering (Gebruikers Tab)
+**Frontend:**
+- [ ] Dropdown filter boven users tabel:
+  - Filter op: All / Admin / Blocked / Paused / Active / GitHub Linked / Not Linked
+  - Filter op study direction: All / TI / CSC / SD / OPENICT / AI
+- [ ] Sorteer dropdown:
+  - Sort by: Naam (A-Z/Z-A), Email, Aanmaakdatum (nieuw/oud), Laatste login, Aantal prints
+- [ ] Apply filters in fetchUsers() functie
+**Backend:**
+- [ ] Update GET /api/users endpoint om filter & sort params te accepteren
+- [ ] SQL query aanpassen voor filtering en sorting
+
+### 3. Queue Details Verbeteren
+**Frontend:**
+- [ ] Toon geschatte printtijd per job in queue tabel
+- [ ] Toon file grootte (in MB)
+- [ ] Preview thumbnail van STL files (als beschikbaar via OctoPrint)
+- [ ] Drag & drop reordering implementeren (react-beautiful-dnd of @dnd-kit)
+  - Verwijder up/down knoppen en vervang door drag handles
+**Backend:**
+- [ ] Ensure print_queue table heeft estimated_time kolom
+- [ ] Add file_size to queue entries
+- [ ] API om thumbnails op te halen van OctoPrint
+
+### 4. Bulk Acties (Gebruikers Tab)
+**Frontend:**
+- [ ] Checkbox kolom toevoegen aan users tabel
+- [ ] "Select All" checkbox in table header
+- [ ] Bulk action buttons boven tabel:
+  - Bulk Pause/Resume
+  - Bulk Block/Unblock
+  - Bulk Set Admin
+  - Bulk Send Notification
+- [ ] Selected count indicator (bijv. "3 gebruikers geselecteerd")
+**Backend:**
+- [ ] Bulk endpoints: POST /api/users/bulk/pause, /bulk/block, /bulk/admin
+- [ ] Accept array van user IDs in request body
+
+### 5. Export Functionaliteit
+**Frontend:**
+- [ ] Export button op elke tab
+- [ ] Download als CSV format
+- [ ] Export users list (alle kolommen)
+- [ ] Export queue history
+- [ ] Export session logs
+**Backend:**
+- [ ] GET /api/users/export?format=csv
+- [ ] GET /api/queue/export?format=csv
+- [ ] GET /api/logs/export?format=csv
+- [ ] Generate CSV with proper headers and formatting
+
+---
+
+## 🟡 MIDDEL PRIORITEIT
+
+### 6. User Impersonation (Debug Tool)
+**Frontend:**
+- [ ] "Login als deze user" knop in user details dialog
+- [ ] Bevestiging dialog met waarschuwing
+- [ ] Banner bovenaan scherm: "Je bent ingelogd als [username] - Terug naar admin"
+**Backend:**
+- [ ] POST /api/admin/impersonate/:userId endpoint
+- [ ] Store original admin user in session
+- [ ] Switch req.user to impersonated user
+- [ ] POST /api/admin/stop-impersonation to restore
+
+### 7. Notification Center
+**Frontend:**
+- [ ] Notifications tab in admin panel
+- [ ] Send notification dialog:
+  - Recipient: Specific user / All users / User group
+  - Message text (multi-line)
+  - Priority: Info / Warning / Critical
+  - Send button
+- [ ] Notification history tabel
+**Backend:**
+- [ ] CREATE TABLE notifications (id, user_id, message, priority, read, created_at)
+- [ ] POST /api/notifications/send endpoint
+- [ ] GET /api/notifications voor users om hun notifications op te halen
+- [ ] Socket.io emit voor real-time notification delivery
+**Frontend (User side):**
+- [ ] Notification bell icon in navbar
+- [ ] Badge met unread count
+- [ ] Notification dropdown list
+- [ ] Mark as read functionality
+
+### 8. Printer Management Uitbreiden
+**Frontend:**
+- [ ] Printer details dialog:
+  - Print history (laatste 20 prints)
+  - Uptime/downtime stats
+  - Average print time
+  - Success rate percentage
+- [ ] Filament tracking (optioneel):
+  - Gram gebruikt per print
+  - Totaal verbruik per printer
+- [ ] Remote restart knop (als OctoPrint API dit ondersteunt)
+**Backend:**
+- [ ] GET /api/printers/:id/history endpoint
+- [ ] GET /api/printers/:id/stats (uptime, success rate, etc)
+- [ ] Aggregate data from print_queue table
+- [ ] POST /api/printers/:id/restart (call OctoPrint restart command)
+
+### 9. Audit Trail (Admin Activity Log)
+**Frontend:**
+- [ ] Audit log tab in admin panel
+- [ ] Tabel met kolommen:
+  - Admin user
+  - Action type (pause_user, block_user, edit_user, delete_queue, etc)
+  - Target (welke user/printer/job)
+  - Timestamp
+  - IP address
+- [ ] Filter op admin, action type, date range
+- [ ] Export audit log
+**Backend:**
+- [ ] CREATE TABLE admin_audit_log
+- [ ] Middleware om alle admin acties te loggen
+- [ ] GET /api/admin/audit endpoint
+- [ ] Auto-log in elk admin endpoint (pause, block, delete, etc)
+
+---
+
+## 🟢 LAGE PRIORITEIT (Advanced)
+
+### 10. Advanced Analytics & Grafieken
+**Frontend:**
+- [ ] Analytics tab met charts (gebruik Recharts of Chart.js)
+- [ ] Prints per dag/week/maand (line chart)
+- [ ] Success rate trends (line chart)
+- [ ] Average print time over time
+- [ ] User engagement metrics (bar chart)
+- [ ] Printer utilization percentage (pie chart)
+- [ ] Date range selector
+**Backend:**
+- [ ] GET /api/analytics/prints-over-time?start=&end=&granularity=day|week|month
+- [ ] GET /api/analytics/success-rate-trends
+- [ ] GET /api/analytics/printer-utilization
+- [ ] Complex SQL queries with aggregations
+
+### 11. Role-Based Access Control (RBAC)
+**Database:**
+- [ ] Add `role` column to users: super_admin / moderator / support / user
+- [ ] CREATE TABLE permissions (role, resource, action)
+**Backend:**
+- [ ] Middleware: requireRole(role) voor verschillende admin levels
+- [ ] Super admin kan alles
+- [ ] Moderator kan users pauzeren/blokkeren maar niet verwijderen
+- [ ] Support kan alleen logs bekijken
+**Frontend:**
+- [ ] Toon alleen acties waar user permission voor heeft
+- [ ] Role selector in edit user dialog (alleen voor super admins)
+
+---
+
+## 📋 NIET IMPLEMENTEREN (Excluded)
+- ❌ API keys management (niet nodig voor nu)
+- ❌ Scheduler voor onderhoud (te complex)
+- ❌ User quotas (niet prioriteit)
+
+---
+
+## 🐛 BEKENDE ISSUES
+- TypeScript compile errors in AdminPanelPage.js (false positives, werkt wel in runtime)
+- Warning message wordt getoond maar niet gewist na tonen (admin moet handmatig warning verwijderen)
+- Avatar upload werkt niet correct (moet gefixed worden)
+  - Check CORS settings
+  - Check multer configuratie
+  - Check file permissions in uploads/avatars directory
+- OctoPrint API data niet accuraat genoeg
+  - Meer accurate printer status informatie ophalen
+  - Real-time temperature data
+  - Betere print progress tracking
+  - Webcam/timelapse integratie
+  - Filament sensor data (als beschikbaar)
+
+---
+
+## 💡 EXTRA IDEEËN (Voor Later)
+- Real-time printer webcam feeds in admin panel
+- Print time estimation verbeteren met ML model
+- Auto-detect problematic prints (failed frequently) en waarschuw admin
+- Gebruikers kunnen "print request" indienen die admin moet goedkeuren
+- Maintenance scheduling calendar view
+- Email notifications voor admins bij belangrijke events
+
+---
+
+## 🌐 NETWERK/INFRASTRUCTUUR (Vereist Overleg met HU-IT)
+
+### EDUROAM Dynamic IP Probleem
+**Status:** Geen haast, maar wel belangrijk voor productie deployment  
+**Vereist:** Overleg met HU IT-afdeling en/of andere stakeholders
+
+**Probleem:**
+- Mini PC krijgt steeds ander IP-adres op EDUROAM netwerk
+- Gebruikers kunnen app niet consistent bereiken via hostname/IP
+- Huidige setup werkt alleen als IP-adres hetzelfde blijft
+
+**Impact:**
+- App is niet betrouwbaar toegankelijk voor eindgebruikers
+- Elke keer IP verandert moet frontend config aangepast worden
+- Studenten/docenten kunnen app verliezen na netwerk restart
+
+---
+
+### Mogelijke Oplossingen:
+
+#### **Optie 1: Static IP Aanvragen bij HU-IT** ⭐ (AANBEVOLEN)
+- [ ] Meeting plannen met HU IT-afdeling
+- [ ] Request indienen voor static IP reservation
+- [ ] DHCP reservation op basis van MAC address van mini PC
+- [ ] Documenteer toegewezen IP-adres in project docs
+- [ ] Update frontend/backend configs met static IP
+- [ ] Test na implementatie
+
+**Voordelen:** Meest stabiel, geen extra services, officieel ondersteund  
+**Nadelen:** Vereist goedkeuring HU-IT, kan tijd kosten  
+**Kosten:** Gratis
+
+---
+
+#### **Optie 2: Dynamic DNS (DDNS)** ⭐ (BESTE ALTERNATIEF)
+- [ ] Kies DDNS provider (DuckDNS, No-IP, Dynu, Cloudflare)
+- [ ] Registreer subdomain (bijv: `octoprint-farm.duckdns.org`)
+- [ ] Installeer DDNS client op mini PC
+- [ ] Configureer auto-update script (cron job)
+- [ ] Update frontend axios baseURL naar DDNS hostname
+- [ ] Update backend CORS origins
+- [ ] Update GitHub OAuth callback URLs
+- [ ] Test na IP-adres verandering
+
+**Voordelen:** Snel te implementeren, gratis, geen IT-goedkeuring nodig  
+**Nadelen:** Extra service dependency, kleine delay bij IP change  
+**Kosten:** Gratis (DuckDNS, Dynu basic)
+
+**Implementatie stappen:**
+```bash
+# Op mini PC (Linux):
+# 1. Installeer DDNS client
+curl -O https://www.duckdns.org/update/...
+# 2. Maak cron job
+echo "*/5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1" | crontab -
+# 3. Test
+curl "https://www.duckdns.org/update?domains=octoprint-farm&token=YOUR_TOKEN"
+```
+
+---
+
+#### **Optie 3: Reverse Proxy via Cloud Server** (ADVANCED)
+- [ ] Setup VPS met static IP (DigitalOcean/AWS/Azure)
+- [ ] Installeer nginx of Caddy als reverse proxy
+- [ ] Setup SSL certificate (Let's Encrypt)
+- [ ] Configureer SSH tunnel of WireGuard VPN
+- [ ] Mini PC maakt persistent connection naar VPS
+- [ ] VPS forward alle requests naar mini PC
+- [ ] Update DNS records naar VPS IP
+- [ ] Test externe toegang
+
+**Voordelen:** 
+- App toegankelijk buiten HU netwerk
+- Professional deployment
+- SSL/HTTPS eenvoudig
+- Monitoring en logs centraal
+
+**Nadelen:** 
+- Maandelijkse kosten (€5-10/maand)
+- Meer complexiteit
+- Extra onderhoud
+
+**Kosten:** ~€5-10/maand voor VPS
+
+---
+
+#### **Optie 4: HU Hostname Registration**
+- [ ] Check of HU interne DNS custom hostnames ondersteunt
+- [ ] Request hostname (bijv: `octoprint-farm.hu.nl`)
+- [ ] Registreer bij HU netwerk beheer
+- [ ] Test of hostname resolve werkt op EDUROAM
+- [ ] Update configs naar hostname
+
+**Voordelen:** Officieel HU domein, geen extra services  
+**Nadelen:** Mogelijk niet beschikbaar, vereist IT-goedkeuring  
+**Kosten:** Gratis
+
+---
+
+#### **Optie 5: mDNS/Bonjour** (NIET AANBEVOLEN)
+- [ ] Installeer Avahi (Linux) of Bonjour (Windows)
+- [ ] Advertise als `octoprint-farm.local`
+- [ ] Test binnen zelfde subnet
+
+**Voordelen:** Plug-and-play voor local network  
+**Nadelen:** Werkt waarschijnlijk NIET op EDUROAM (broadcast blocked)  
+**Kosten:** Gratis
+
+---
+
+### Aanbevolen Actieplan:
+
+**Fase 1: Korte termijn (deze week)**
+- [ ] Document huidige IP-adres en hostname
+- [ ] Test DuckDNS setup als proof-of-concept (30 min)
+- [ ] Evalueer of DDNS voldoende is voor MVP
+
+**Fase 2: Overleg (binnen 2 weken)**
+- [ ] Meeting met HU-IT plannen
+- [ ] Request indienen voor static IP of hostname
+- [ ] Backup plan: DDNS als fallback
+
+**Fase 3: Implementatie (na goedkeuring)**
+- [ ] Implementeer gekozen oplossing
+- [ ] Update alle configs en documentatie
+- [ ] Test met eindgebruikers
+- [ ] Monitor stabiliteit
+
+**Fase 4: Frontend/Backend Changes**
+- [ ] Update `frontend/src/config.js` of `.env`:
+  ```javascript
+  REACT_APP_API_URL=http://octoprint-farm.duckdns.org:3001
+  ```
+- [ ] Update `backend/server.js` CORS origins:
+  ```javascript
+  origin: ['http://octoprint-farm.duckdns.org', 'http://localhost:3000']
+  ```
+- [ ] Update GitHub OAuth callback URLs in GitHub App settings
+- [ ] Update session cookie domain settings
+- [ ] Test alle authenticatie flows
+
+---
+
+### Contactpersonen:
+- [ ] HU IT-afdeling: (contact info toevoegen)
+- [ ] Netwerk beheerder: (naam toevoegen)
+- [ ] Andere stakeholders: (wie nog meer?)
+
+### Documentatie:
+- [ ] Document welke oplossing gekozen is
+- [ ] Update README.md met deployment instructies
+- [ ] Update `.env.example` met nieuwe variabelen
+- [ ] Maak troubleshooting guide voor netwerk issues
+
+---
+
+## 🔄 AUTOMATISERING & MAINTENANCE
+
+### Automatisch Herstarten Printer Docker Containers
+**Requirement:** Elke ochtend om 8:00 uur moeten alle printer Docker containers automatisch herstarten
+
+**Implementatie opties:**
+
+#### **Optie 1: Cron Job op Mini PC** ⭐ (AANBEVOLEN)
+- [ ] SSH naar mini PC
+- [ ] Maak restart script aan:
+  ```bash
+  # /home/user/restart-printers.sh
+  #!/bin/bash
+  echo "$(date): Restarting OctoPrint containers..."
+  
+  # Restart alle OctoPrint containers
+  docker restart $(docker ps -q --filter "name=octoprint")
+  
+  # Of specifiek per printer:
+  # docker restart octoprint_printer1
+  # docker restart octoprint_printer2
+  # docker restart octoprint_printer3
+  
+  echo "$(date): Restart complete"
+  ```
+- [ ] Maak script executable: `chmod +x restart-printers.sh`
+- [ ] Test script handmatig: `./restart-printers.sh`
+- [ ] Voeg cron job toe: `crontab -e`
+  ```bash
+  # Restart printers elke dag om 8:00
+  0 8 * * * /home/user/restart-printers.sh >> /var/log/printer-restart.log 2>&1
+  ```
+- [ ] Controleer cron job: `crontab -l`
+- [ ] Test door tijd tijdelijk te veranderen
+- [ ] Monitor log file: `tail -f /var/log/printer-restart.log`
+
+**Voordelen:** Simpel, betrouwbaar, geen extra dependencies  
+**Nadelen:** Vereist cron configuratie op mini PC
+
+---
+
+#### **Optie 2: Docker Compose met Restart Policy**
+- [ ] Update `docker-compose.yml` voor OctoPrint services:
+  ```yaml
+  services:
+    octoprint_printer1:
+      restart: unless-stopped
+      # Voeg healthcheck toe
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:5000"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        start_period: 40s
+  ```
+- [ ] Gebruik watchtower voor scheduled restarts:
+  ```yaml
+  services:
+    watchtower:
+      image: containrrr/watchtower
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      environment:
+        - WATCHTOWER_SCHEDULE=0 0 8 * * *  # 8:00 elke dag
+        - WATCHTOWER_CLEANUP=true
+      command: octoprint_printer1 octoprint_printer2 octoprint_printer3
+  ```
+- [ ] Deploy nieuwe compose config
+- [ ] Test watchtower scheduling
+
+**Voordelen:** Declaratief, makkelijk te beheren via compose  
+**Nadelen:** Extra container (watchtower), meer complexiteit
+
+---
+
+#### **Optie 3: Node-Cron in Backend** (NIET AANBEVOLEN)
+- [ ] Installeer `dockerode` package: `npm install dockerode`
+- [ ] Update `backend/server.js`:
+  ```javascript
+  const Docker = require('dockerode');
+  const docker = new Docker({socketPath: '/var/run/docker.sock'});
+  
+  // Schedule daily restart at 8:00 AM
+  cron.schedule('0 8 * * *', async () => {
+    console.log('Restarting OctoPrint containers...');
+    try {
+      const containers = await docker.listContainers();
+      const octoprintContainers = containers.filter(c => 
+        c.Names.some(name => name.includes('octoprint'))
+      );
+      
+      for (const containerInfo of octoprintContainers) {
+        const container = docker.getContainer(containerInfo.Id);
+        await container.restart();
+        console.log(`Restarted: ${containerInfo.Names[0]}`);
+      }
+    } catch (error) {
+      console.error('Error restarting containers:', error);
+    }
+  });
+  ```
+- [ ] Test restart functionaliteit
+- [ ] Add logging naar database
+
+**Voordelen:** Geïntegreerd in backend, centraal beheer  
+**Nadelen:** Backend heeft Docker socket access nodig (security risk), meer code complexity
+
+---
+
+### Aanbevolen Implementatie:
+**Gebruik Optie 1 (Cron Job)** - simpel, betrouwbaar, geen code changes nodig
+
+### Extra Features (optioneel):
+- [ ] **Graceful restart**: Check of er geen actieve prints zijn voordat restart
+  ```bash
+  # In restart script: check OctoPrint API voor active prints
+  for printer in printer1 printer2 printer3; do
+    status=$(curl -s http://localhost:5001/api/job | jq -r '.state')
+    if [ "$status" = "Printing" ]; then
+      echo "Printer $printer is printing, skipping restart"
+      continue
+    fi
+    docker restart octoprint_$printer
+  done
+  ```
+- [ ] **Notification**: Stuur notificatie naar admin wanneer restart gebeurt
+- [ ] **Health check**: Verify dat containers succesvol herstart zijn
+- [ ] **Backup voor restart**: Maak snapshot van belangrijke data
+- [ ] **Flexible scheduling**: Maak restart tijd configureerbaar via admin panel
+
+### Testing:
+- [ ] Test restart tijdens normale operatie
+- [ ] Test restart tijdens actieve print (moet skippen)
+- [ ] Verify dat containers daadwerkelijk herstarten
+- [ ] Check logs voor errors
+- [ ] Monitor voor 1 week om stabiliteit te garanderen
+
+### Documentatie:
+- [ ] Document gekozen oplossing in README
+- [ ] Voeg troubleshooting stappen toe
+- [ ] Document hoe restart schedule te wijzigen
+- [ ] Voeg monitoring instructies toe

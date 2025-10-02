@@ -741,18 +741,21 @@ router.get('/admin/stats', requireAuth, requireVerifiedEmail, requireAdmin, asyn
     }
 });
 
-// Pause user account (admin only)
+// Pause/unpause user account (admin only)
 router.post('/:id/pause', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
+        const { paused } = req.body;
+        
         if (isNaN(userId)) {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
         
+        const pausedValue = paused ? 1 : 0;
         const db = req.app.locals.db;
-        await db.run('UPDATE users SET paused = 1 WHERE id = ?', [userId]);
+        await db.run('UPDATE users SET paused = ? WHERE id = ?', [pausedValue, userId]);
         
-        console.log(`Admin paused user ${userId}`);
+        console.log(`Admin ${paused ? 'paused' : 'unpaused'} user ${userId}`);
         res.json({ success: true });
     } catch (error) {
         console.error('Error pausing user:', error);
@@ -760,18 +763,21 @@ router.post('/:id/pause', requireAuth, requireVerifiedEmail, requireAdmin, async
     }
 });
 
-// Block user account (admin only)
+// Block/unblock user account (admin only)
 router.post('/:id/block', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
+        const { blocked } = req.body;
+        
         if (isNaN(userId)) {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
         
+        const blockedValue = blocked ? 1 : 0;
         const db = req.app.locals.db;
-        await db.run('UPDATE users SET blocked = 1 WHERE id = ?', [userId]);
+        await db.run('UPDATE users SET blocked = ? WHERE id = ?', [blockedValue, userId]);
         
-        console.log(`Admin blocked user ${userId}`);
+        console.log(`Admin ${blocked ? 'blocked' : 'unblocked'} user ${userId}`);
         res.json({ success: true });
     } catch (error) {
         console.error('Error blocking user:', error);

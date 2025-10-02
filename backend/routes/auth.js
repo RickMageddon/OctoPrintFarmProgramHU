@@ -1061,10 +1061,14 @@ router.get('/status', (req, res) => {
             email: req.user.email,
             email_verified: req.user.email_verified,
             is_admin: req.user.is_admin,
+            github_org_member: req.user.github_org_member,
             study_direction: req.user.study_direction,
             avatar_url: req.user.avatar_url,
             created_at: req.user.created_at,
-            last_login: req.user.last_login
+            last_login: req.user.last_login,
+            warning: req.user.warning,
+            paused: req.user.paused,
+            blocked: req.user.blocked
         } : null
     });
 });

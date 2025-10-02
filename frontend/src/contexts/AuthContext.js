@@ -29,6 +29,26 @@ export const AuthProvider = ({ children }) => {
       if (response.data.authenticated) {
         console.log('✅ User authenticated:', response.data.user);
         setUser(response.data.user);
+        
+        // Show warning if present
+        if (response.data.user.warning) {
+          alert(`⚠️ WAARSCHUWING VAN ADMIN:\n\n${response.data.user.warning}`);
+          // Clear warning after showing (optional - admin can decide)
+          // await axios.post(`/api/users/${response.data.user.id}/clear-warning`);
+        }
+        
+        // Check if account is paused or blocked
+        if (response.data.user.blocked) {
+          alert('❌ Je account is geblokkeerd. Neem contact op met een admin.');
+          await axios.post('/api/auth/logout');
+          setUser(null);
+          window.location.href = '/login';
+          return;
+        }
+        
+        if (response.data.user.paused) {
+          alert('⏸️ Je account is gepauzeerd. Neem contact op met een admin.');
+        }
       } else {
         console.log('❌ User not authenticated');
         setUser(null);

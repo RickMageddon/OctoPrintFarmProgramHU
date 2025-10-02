@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Tabs, Tab, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, Snackbar, Tooltip, CircularProgress, Pagination
+  Box, Tabs, Tab, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, Snackbar, Tooltip, CircularProgress, Pagination, Card, CardContent, Grid, Checkbox, FormControl, InputLabel, Chip
 } from '@mui/material';
-import { Edit, Delete, Warning, Pause, Block, Replay, ArrowUpward, ArrowDownward, Save, Info } from '@mui/icons-material';
+import { Edit, Delete, Warning, Pause, Block, Replay, ArrowUpward, ArrowDownward, Save, Info, Download, Assessment, TrendingUp, People, Print, CheckCircle, Error as ErrorIcon, Cancel } from '@mui/icons-material';
 import axios from 'axios';
 
 function TabPanel(props) {
@@ -16,6 +16,9 @@ function TabPanel(props) {
 
 const AdminPanelPage = () => {
   const [tab, setTab] = useState(0);
+  // Dashboard
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   // Users
   const [users, setUsers] = useState([]);
   const [usersTotal, setUsersTotal] = useState(0);
@@ -39,10 +42,23 @@ const AdminPanelPage = () => {
 
   // Fetch all data
   useEffect(() => {
-    fetchUsers();
-    fetchQueue();
-    fetchPrinters();
-  }, [userPage]);
+    if (tab === 0) fetchStats();
+    if (tab === 1) fetchUsers();
+    if (tab === 2) fetchQueue();
+    if (tab === 3) fetchPrinters();
+  }, [tab, userPage]);
+
+  const fetchStats = async () => {
+    try {
+      setLoadingStats(true);
+      const res = await axios.get('/api/users/admin/stats');
+      setStats(res.data);
+    } catch (err) {
+      console.error('Error fetching stats', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -89,16 +105,18 @@ const AdminPanelPage = () => {
     setSnackbar({ open: true, message: 'GitHub login gereset' });
   };
   const handlePauseUser = async (user) => {
-    if (!window.confirm(`Pauzeer account ${user.username}?`)) return;
-    await axios.post(`/api/users/${user.id}/pause`);
+    const action = user.paused ? 'hervatten' : 'pauzeren';
+    if (!window.confirm(`Account ${user.username} ${action}?`)) return;
+    await axios.post(`/api/users/${user.id}/pause`, { paused: !user.paused });
     fetchUsers();
-    setSnackbar({ open: true, message: 'Account gepauzeerd' });
+    setSnackbar({ open: true, message: user.paused ? 'Account hervat' : 'Account gepauzeerd' });
   };
   const handleBlockUser = async (user) => {
-    if (!window.confirm(`Blokkeer account ${user.username}?`)) return;
-    await axios.post(`/api/users/${user.id}/block`);
+    const action = user.blocked ? 'deblokkeren' : 'blokkeren';
+    if (!window.confirm(`Account ${user.username} ${action}?`)) return;
+    await axios.post(`/api/users/${user.id}/block`, { blocked: !user.blocked });
     fetchUsers();
-    setSnackbar({ open: true, message: 'Account geblokkeerd' });
+    setSnackbar({ open: true, message: user.blocked ? 'Account gedeblokkeerd' : 'Account geblokkeerd' });
   };
   const handleWarning = async () => {
     await axios.post(`/api/users/${warningDialog.user.id}/warning`, { text: warningDialog.text });
@@ -143,12 +161,101 @@ const AdminPanelPage = () => {
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
       <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-        <Tab label="Gebruikers" />
-        <Tab label="Wachtrij" />
+        <Tab label="Dashboard" icon={<Assessment />} iconPosition="start" />
+        <Tab label="Gebruikers" icon={<People />} iconPosition="start" />
+        <Tab label="Wachtrij" icon={<Print />} iconPosition="start" />
         <Tab label="Printers" />
       </Tabs>
-      {/* Gebruikers */}
+      {/* Dashboard */}
       <TabPanel value={tab} index={0}>
+        {loadingStats ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>
+        ) : stats ? (
+          <Grid container spacing={3}>
+            {/* User Stats Cards */}
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Totaal Gebruikers</Typography>
+                  <Typography variant="h3">{stats.users.total_users}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {stats.users.admin_users} admins • {stats.users.verified_users} geverifieerd
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Actieve Gebruikers</Typography>
+                  <Typography variant="h3">{stats.users.active_users_7d}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Laatste 7 dagen • {stats.users.active_users_30d} laatste 30d
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Print Jobs</Typography>
+                  <Typography variant="h3">{stats.jobs.total_jobs}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                    <Chip icon={<CheckCircle />} label={`${stats.jobs.completed_jobs} voltooid`} color="success" size="small" />
+                    <Chip icon={<ErrorIcon />} label={`${stats.jobs.failed_jobs} mislukt`} color="error" size="small" />
+                    <Chip icon={<Cancel />} label={`${stats.jobs.cancelled_jobs} geannuleerd`} size="small" />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Huidige Wachtrij</Typography>
+                  <Typography variant="h3">{stats.jobs.queued_jobs + stats.jobs.printing_jobs}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {stats.jobs.printing_jobs} aan het printen • {stats.jobs.queued_jobs} in wachtrij
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            {/* Recent Activity */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Recente Activiteit</Typography>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Gebruiker</TableCell>
+                          <TableCell>Actie</TableCell>
+                          <TableCell>Details</TableCell>
+                          <TableCell>Tijd</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {stats.recentActivity.map((log, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{log.username}</TableCell>
+                            <TableCell>{log.action}</TableCell>
+                            <TableCell>{log.details}</TableCell>
+                            <TableCell>{new Date(log.timestamp).toLocaleString('nl-NL')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        ) : (
+          <Typography>Geen data beschikbaar</Typography>
+        )}
+      </TabPanel>
+      {/* Gebruikers */}
+      <TabPanel value={tab} index={1}>
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <TextField placeholder="Zoek gebruikers..." size="small" value={userSearch} onChange={e => setUserSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserPage(1); fetchUsers(); } }} />
           <Button onClick={() => { setUserPage(1); fetchUsers(); }}>Zoek</Button>
@@ -180,8 +287,8 @@ const AdminPanelPage = () => {
                     <Tooltip title="Bewerk gebruiker"><IconButton onClick={() => handleEditUser(user)}><Edit /></IconButton></Tooltip>
                     <Tooltip title="Reset GitHub koppeling"><IconButton onClick={() => handleResetGithub(user)}><Replay /></IconButton></Tooltip>
                     <Tooltip title="Waarschuwing"><IconButton onClick={() => setWarningDialog({ open: true, user, text: '' })}><Warning /></IconButton></Tooltip>
-                    <Tooltip title="Pauzeer"><IconButton onClick={() => handlePauseUser(user)}><Pause /></IconButton></Tooltip>
-                    <Tooltip title="Blokkeer"><IconButton onClick={() => handleBlockUser(user)}><Block /></IconButton></Tooltip>
+                    <Tooltip title={user.paused ? "Hervatten" : "Pauzeren"}><IconButton onClick={() => handlePauseUser(user)} color={user.paused ? "warning" : "default"}><Pause /></IconButton></Tooltip>
+                    <Tooltip title={user.blocked ? "Deblokkeren" : "Blokkeren"}><IconButton onClick={() => handleBlockUser(user)} color={user.blocked ? "error" : "default"}><Block /></IconButton></Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -218,9 +325,59 @@ const AdminPanelPage = () => {
             <Button onClick={handleWarning} startIcon={<Warning />}>Plaatsen</Button>
           </DialogActions>
         </Dialog>
+        {/* User details dialog */}
+        <Dialog open={viewUserDetails.open} onClose={closeUserDetails} maxWidth="md" fullWidth>
+          <DialogTitle>Gebruiker Details: {viewUserDetails.user?.username}</DialogTitle>
+          <DialogContent>
+            {viewUserDetails.loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>
+            ) : (
+              <>
+                <Typography variant="subtitle2" gutterBottom>Account Info</Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2">Email: {viewUserDetails.user?.email}</Typography>
+                  <Typography variant="body2">GitHub: {viewUserDetails.user?.github_username || 'Niet gekoppeld'}</Typography>
+                  <Typography variant="body2">Admin: {viewUserDetails.user?.is_admin ? 'Ja' : 'Nee'}</Typography>
+                  <Typography variant="body2">Status: {viewUserDetails.user?.blocked ? 'Geblokkeerd' : viewUserDetails.user?.paused ? 'Gepauzeerd' : 'Actief'}</Typography>
+                  {viewUserDetails.user?.warning && (
+                    <Typography variant="body2" color="error">Waarschuwing: {viewUserDetails.user.warning}</Typography>
+                  )}
+                </Box>
+                <Typography variant="subtitle2" gutterBottom>Recente Activiteit</Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Actie</TableCell>
+                        <TableCell>Details</TableCell>
+                        <TableCell>Tijd</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {viewUserDetails.logs.length === 0 ? (
+                        <TableRow><TableCell colSpan={3} align="center">Geen logs gevonden</TableCell></TableRow>
+                      ) : (
+                        viewUserDetails.logs.map((log, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{log.action}</TableCell>
+                            <TableCell>{log.details}</TableCell>
+                            <TableCell>{new Date(log.timestamp).toLocaleString('nl-NL')}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeUserDetails}>Sluiten</Button>
+          </DialogActions>
+        </Dialog>
       </TabPanel>
       {/* Wachtrij */}
-      <TabPanel value={tab} index={1}>
+      <TabPanel value={tab} index={2}>
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <TextField placeholder="Zoek in wachtrij..." size="small" value={queueSearch} onChange={e => setQueueSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') fetchQueue(); }} />
           <Button onClick={() => { setQueuePage(1); fetchQueue(); }}>Zoek</Button>
@@ -258,7 +415,7 @@ const AdminPanelPage = () => {
         </Box>
       </TabPanel>
       {/* Printers */}
-      <TabPanel value={tab} index={2}>
+      <TabPanel value={tab} index={3}>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
