@@ -15,52 +15,7 @@ function TabPanel(props) {
 }
 
 const AdminPanelPage = () => {
-  // Sonoff relay states
-  const [relayStates, setRelayStates] = useState({});
-  const [loadingRelay, setLoadingRelay] = useState({});
-  const [confirmPower, setConfirmPower] = useState({ open: false, printer: null, action: null });
-
-  // Fetch relay states
-  const fetchRelayStates = async () => {
-    try {
-      const res = await axios.get('/api/sonoff/states');
-      setRelayStates(res.data.states || {});
-    } catch (err) {
-      console.error('Error fetching relay states', err);
-    }
-  };
-
-  // Fetch relay states when Printers tab is active
-  useEffect(() => {
-    if (tab === 3) fetchRelayStates();
-  }, [tab]);
-
-  // Power control handlers
-  const handlePower = async (printer, action) => {
-    setLoadingRelay(r => ({ ...r, [printer.id]: true }));
-    try {
-      await axios.post(`/api/sonoff/printer/${printer.id}/${action}`);
-      setSnackbar({ open: true, message: `Printer ${printer.name} ${action === 'on' ? 'AAN' : 'UIT'}` });
-      await fetchRelayStates();
-    } catch (err) {
-      setSnackbar({ open: true, message: `Fout bij power ${action}` });
-    } finally {
-      setLoadingRelay(r => ({ ...r, [printer.id]: false }));
-    }
-  };
-
-  const handleAllPower = async (action) => {
-    setLoading(true);
-    try {
-      await axios.post(`/api/sonoff/all/${action}`);
-      setSnackbar({ open: true, message: `Alle printers ${action === 'on' ? 'AAN' : 'UIT'}` });
-      await fetchRelayStates();
-    } catch (err) {
-      setSnackbar({ open: true, message: `Fout bij alles ${action}` });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ...andere state...
   const [tab, setTab] = useState(0);
   // Dashboard
   const [stats, setStats] = useState(null);
@@ -81,6 +36,33 @@ const AdminPanelPage = () => {
   const [userSort, setUserSort] = useState('created_desc');
   // Queue
   const [queue, setQueue] = useState([]);
+  const [queueSearch, setQueueSearch] = useState('');
+  const [queuePage, setQueuePage] = useState(1);
+  const QUEUE_PER_PAGE = 10;
+  // Printers
+  const [printers, setPrinters] = useState([]);
+  // Snackbar
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [loading, setLoading] = useState(false);
+
+  // Sonoff relay states
+  const [relayStates, setRelayStates] = useState({});
+  const [loadingRelay, setLoadingRelay] = useState({});
+  const [confirmPower, setConfirmPower] = useState({ open: false, printer: null, action: null });
+
+  // Fetch relay states
+  const fetchRelayStates = async () => {
+    try {
+      const res = await axios.get('/api/sonoff/states');
+      setRelayStates(res.data.states || {});
+    function TabPanel(props) {
+      const { children, value, index, ...other } = props;
+      return (
+        <div role="tabpanel" hidden={value !== index} {...other}>
+          {value === index && <Box sx={{ p: 2 }}>{children}</Box>}
+        </div>
+      );
+    }
   const [queueSearch, setQueueSearch] = useState('');
   const [queuePage, setQueuePage] = useState(1);
   const QUEUE_PER_PAGE = 10;
@@ -579,8 +561,8 @@ const AdminPanelPage = () => {
         </Dialog>
       </TabPanel>
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />
+
     </Box>
   );
-};
-
+}
 export default AdminPanelPage;
