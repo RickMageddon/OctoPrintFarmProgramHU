@@ -33,8 +33,14 @@ export const AuthProvider = ({ children }) => {
         // Show warning if present
         if (response.data.user.warning) {
           alert(`⚠️ WAARSCHUWING VAN ADMIN:\n\n${response.data.user.warning}`);
-          // Clear warning after showing (optional - admin can decide)
-          // await axios.post(`/api/users/${response.data.user.id}/clear-warning`);
+          // Clear warning after showing
+          try {
+            await axios.post('/api/users/clear-warning');
+            // Update user state so warning is not shown again
+            setUser({ ...response.data.user, warning: null });
+          } catch (err) {
+            console.error('Fout bij wissen van warning:', err);
+          }
         }
         
         // Check if account is paused or blocked

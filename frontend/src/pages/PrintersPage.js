@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
     Container,
     Typography,
@@ -39,6 +40,7 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 
 const PrintersPage = () => {
+    const { user } = useAuth();
     const [printers, setPrinters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -231,12 +233,14 @@ const PrintersPage = () => {
                                                             <PlayArrow />
                                                         </IconButton>
                                                     )}
-                                                    <IconButton
-                                                        onClick={() => handlePrinterAction(printer.id, 'settings')}
-                                                        title="Printer instellingen"
-                                                    >
-                                                        <Settings />
-                                                    </IconButton>
+                                                    {user?.is_admin && (
+                                                        <IconButton
+                                                            onClick={() => handlePrinterAction(printer.id, 'settings')}
+                                                            title="Printer instellingen"
+                                                        >
+                                                            <Settings />
+                                                        </IconButton>
+                                                    )}
                                                 </Box>
                                             </Box>
 

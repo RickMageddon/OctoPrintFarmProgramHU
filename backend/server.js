@@ -17,8 +17,10 @@ const printerRoutes = require('./routes/printers');
 const fileRoutes = require('./routes/files');
 const queueRoutes = require('./routes/queue');
 const userRoutes = require('./routes/users');
+const sonoffRoutes = require('./routes/sonoff');
 const OctoPrintService = require('./services/octoprintService');
 const EmailService = require('./services/emailService');
+const SonoffService = require('./services/sonoffService');
 
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +37,7 @@ const PORT = process.env.PORT || 3001;
 const db = new Database(process.env.DATABASE_PATH);
 const octoprintService = new OctoPrintService(db);
 const emailService = new EmailService();
+const sonoffService = new SonoffService();
 
 // Security middleware
 app.use(helmet());
@@ -170,6 +173,7 @@ passport.deserializeUser(async (data, done) => {
 app.locals.db = db;
 app.locals.octoprintService = octoprintService;
 app.locals.emailService = emailService;
+app.locals.sonoffService = sonoffService;
 app.locals.io = io;
 
 // Routes
@@ -178,6 +182,7 @@ app.use('/api/printers', printerRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/sonoff', sonoffRoutes);
 
 // Monitor routes - split HTML and API
 const monitorRoutes = require('./routes/monitor');

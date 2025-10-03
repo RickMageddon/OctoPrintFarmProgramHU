@@ -173,12 +173,18 @@ const Navbar = () => {
                 horizontal: 'right',
               }}
             >
-              <Avatar sx={{ width: 32, height: 32 }}>
+              <Avatar 
+                src={user?.avatar_url} 
+                sx={{ width: 32, height: 32 }}
+              >
                 {user?.username?.charAt(0).toUpperCase()}
               </Avatar>
             </Badge>
           ) : (
-            <Avatar sx={{ width: 32, height: 32 }}>
+            <Avatar 
+              src={user?.avatar_url} 
+              sx={{ width: 32, height: 32 }}
+            >
               {user?.username?.charAt(0).toUpperCase()}
             </Avatar>
           )}

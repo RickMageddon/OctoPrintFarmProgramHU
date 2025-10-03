@@ -296,9 +296,8 @@ router.post('/avatar', (req, res, next) => {
         }
 
         const db = req.app.locals.db;
-        // Use full backend URL for avatar to ensure it's accessible from frontend
-        const backendUrl = process.env.BACKEND_URL || 'http://3dprinters:3001';
-        const avatarUrl = `${backendUrl}/uploads/avatars/${req.file.filename}`;
+        // Use relative URL so it works with nginx proxy in Docker and direct access
+        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
         console.log('🔗 Generated avatar URL:', avatarUrl);
 
         // Delete old avatar if exists
@@ -361,6 +360,9 @@ router.get('/', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res
         const limit = parseInt(req.query.limit) || 50;
         const offset = parseInt(req.query.offset) || 0;
         const search = req.query.search || '';
+        const status = req.query.status || 'all';
+        const study = req.query.study || 'all';
+        const sort = req.query.sort || 'created_desc';
 
         let query = `
             SELECT 
@@ -377,6 +379,7 @@ router.get('/', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res
                 u.warning,
                 u.created_at,
                 u.last_login,
+                u.study_direction,
                 COUNT(pq.id) as total_jobs,
                 COUNT(CASE WHEN pq.status = 'completed' THEN 1 END) as completed_jobs,
                 COUNT(f.id) as favorites_count
@@ -385,34 +388,74 @@ router.get('/', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res
             LEFT JOIN user_favorites f ON u.id = f.user_id
         `;
 
+        let where = [];
         let params = [];
-
         if (search) {
-            query += ' WHERE u.username LIKE ? OR u.email LIKE ?';
+            where.push('(u.username LIKE ? OR u.email LIKE ?)');
             const searchPattern = `%${search}%`;
             params.push(searchPattern, searchPattern);
         }
+        if (status && status !== 'all') {
+            if (status === 'admin') where.push('u.is_admin = 1');
+            if (status === 'blocked') where.push('u.blocked = 1');
+            if (status === 'paused') where.push('u.paused = 1');
+            if (status === 'active') where.push('u.blocked = 0 AND u.paused = 0');
+            if (status === 'github_linked') where.push('u.github_id IS NOT NULL');
+            if (status === 'not_linked') where.push('u.github_id IS NULL');
+        }
+        if (study && study !== 'all') {
+            where.push('u.study_direction = ?');
+            params.push(study);
+        }
+        if (where.length > 0) {
+            query += ' WHERE ' + where.join(' AND ');
+        }
 
-        query += `
-            GROUP BY u.id
-            ORDER BY u.created_at DESC
-            LIMIT ? OFFSET ?
-        `;
+        query += ' GROUP BY u.id ';
 
+        // Sorting
+        const sortMap = {
+            'created_desc': 'u.created_at DESC',
+            'created_asc': 'u.created_at ASC',
+            'name_asc': 'u.username COLLATE NOCASE ASC',
+            'name_desc': 'u.username COLLATE NOCASE DESC',
+            'email_asc': 'u.email COLLATE NOCASE ASC',
+            'email_desc': 'u.email COLLATE NOCASE DESC',
+            'lastlogin_desc': 'u.last_login DESC',
+            'lastlogin_asc': 'u.last_login ASC',
+            'prints_desc': 'total_jobs DESC',
+            'prints_asc': 'total_jobs ASC'
+        };
+        query += ' ORDER BY ' + (sortMap[sort] || 'u.created_at DESC');
+        query += ' LIMIT ? OFFSET ?';
         params.push(limit, offset);
 
         const users = await db.all(query, params);
 
         // Get total count
-        let countQuery = 'SELECT COUNT(*) as count FROM users';
+        let countQuery = 'SELECT COUNT(*) as count FROM users u';
+        let countWhere = [];
         let countParams = [];
-
         if (search) {
-            countQuery += ' WHERE username LIKE ? OR email LIKE ?';
+            countWhere.push('(u.username LIKE ? OR u.email LIKE ?)');
             const searchPattern = `%${search}%`;
             countParams.push(searchPattern, searchPattern);
         }
-
+        if (status && status !== 'all') {
+            if (status === 'admin') countWhere.push('u.is_admin = 1');
+            if (status === 'blocked') countWhere.push('u.blocked = 1');
+            if (status === 'paused') countWhere.push('u.paused = 1');
+            if (status === 'active') countWhere.push('u.blocked = 0 AND u.paused = 0');
+            if (status === 'github_linked') countWhere.push('u.github_id IS NOT NULL');
+            if (status === 'not_linked') countWhere.push('u.github_id IS NULL');
+        }
+        if (study && study !== 'all') {
+            countWhere.push('u.study_direction = ?');
+            countParams.push(study);
+        }
+        if (countWhere.length > 0) {
+            countQuery += ' WHERE ' + countWhere.join(' AND ');
+        }
         const total = await db.get(countQuery, countParams);
 
         res.json({
@@ -782,6 +825,24 @@ router.post('/:id/block', requireAuth, requireVerifiedEmail, requireAdmin, async
     } catch (error) {
         console.error('Error blocking user:', error);
         res.status(500).json({ error: 'Failed to block user' });
+    }
+});
+// Clear warning for current user
+router.post('/clear-warning', requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const db = req.app.locals.db;
+        await db.run('UPDATE users SET warning = NULL WHERE id = ?', [userId]);
+        // Update session user object if present
+        if (req.session && req.session.user) {
+            req.session.user.warning = null;
+        }
+        // Also update req.user object
+        req.user.warning = null;
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error clearing warning:', error);
+        res.status(500).json({ error: 'Failed to clear warning' });
     }
 });
 

@@ -2,7 +2,52 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Tabs, Tab, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, Snackbar, Tooltip, CircularProgress, Pagination, Card, CardContent, Grid, Checkbox, FormControl, InputLabel, Chip
 } from '@mui/material';
-import { Edit, Delete, Warning, Pause, Block, Replay, ArrowUpward, ArrowDownward, Save, Info, Download, Assessment, TrendingUp, People, Print, CheckCircle, Error as ErrorIcon, Cancel } from '@mui/icons-material';
+import { Edit, Delete, Warning, Pause, Block, Replay, ArrowUpward, ArrowDownward, Save, Info, Download, Assessment, TrendingUp, People, Print, CheckCircle, Error as ErrorIcon, Cancel, PowerSettingsNew, PowerOff, FlashOn } from '@mui/icons-material';
+  // Sonoff relay states
+  const [relayStates, setRelayStates] = useState({});
+  const [loadingRelay, setLoadingRelay] = useState({});
+  const [confirmPower, setConfirmPower] = useState({ open: false, printer: null, action: null });
+
+  // Fetch relay states
+  const fetchRelayStates = async () => {
+    try {
+      const res = await axios.get('/api/sonoff/states');
+      setRelayStates(res.data.states || {});
+    } catch (err) {
+      console.error('Error fetching relay states', err);
+    }
+  };
+
+  // Fetch relay states when Printers tab is active
+  useEffect(() => {
+    if (tab === 3) fetchRelayStates();
+  }, [tab]);
+  // Power control handlers
+  const handlePower = async (printer, action) => {
+    setLoadingRelay(r => ({ ...r, [printer.id]: true }));
+    try {
+      await axios.post(`/api/sonoff/printer/${printer.id}/${action}`);
+      setSnackbar({ open: true, message: `Printer ${printer.name} ${action === 'on' ? 'AAN' : 'UIT'}` });
+      await fetchRelayStates();
+    } catch (err) {
+      setSnackbar({ open: true, message: `Fout bij power ${action}` });
+    } finally {
+      setLoadingRelay(r => ({ ...r, [printer.id]: false }));
+    }
+  };
+
+  const handleAllPower = async (action) => {
+    setLoading(true);
+    try {
+      await axios.post(`/api/sonoff/all/${action}`);
+      setSnackbar({ open: true, message: `Alle printers ${action === 'on' ? 'AAN' : 'UIT'}` });
+      await fetchRelayStates();
+    } catch (err) {
+      setSnackbar({ open: true, message: `Fout bij alles ${action}` });
+    } finally {
+      setLoading(false);
+    }
+  };
 import axios from 'axios';
 
 function TabPanel(props) {
@@ -29,6 +74,10 @@ const AdminPanelPage = () => {
   const USERS_PER_PAGE = 10;
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [viewUserDetails, setViewUserDetails] = useState({ open: false, user: null, logs: [] });
+  // Filtering & sorting
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [userStudyFilter, setUserStudyFilter] = useState('all');
+  const [userSort, setUserSort] = useState('created_desc');
   // Queue
   const [queue, setQueue] = useState([]);
   const [queueSearch, setQueueSearch] = useState('');
@@ -63,7 +112,16 @@ const AdminPanelPage = () => {
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
-      const res = await axios.get('/api/users', { params: { limit: USERS_PER_PAGE, offset: (userPage - 1) * USERS_PER_PAGE, search: userSearch } });
+      const res = await axios.get('/api/users', {
+        params: {
+          limit: USERS_PER_PAGE,
+          offset: (userPage - 1) * USERS_PER_PAGE,
+          search: userSearch,
+          status: userStatusFilter,
+          study: userStudyFilter,
+          sort: userSort
+        }
+      });
       setUsers(res.data.users);
       setUsersTotal(res.data.total || 0);
     } catch (err) {
@@ -256,8 +314,37 @@ const AdminPanelPage = () => {
       </TabPanel>
       {/* Gebruikers */}
       <TabPanel value={tab} index={1}>
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
           <TextField placeholder="Zoek gebruikers..." size="small" value={userSearch} onChange={e => setUserSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserPage(1); fetchUsers(); } }} />
+          <Select size="small" value={userStatusFilter} onChange={e => { setUserStatusFilter(e.target.value); setUserPage(1); }} displayEmpty>
+            <MenuItem value="all">Alle statussen</MenuItem>
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="blocked">Geblokkeerd</MenuItem>
+            <MenuItem value="paused">Gepauzeerd</MenuItem>
+            <MenuItem value="active">Actief</MenuItem>
+            <MenuItem value="github_linked">GitHub gekoppeld</MenuItem>
+            <MenuItem value="not_linked">Niet gekoppeld</MenuItem>
+          </Select>
+          <Select size="small" value={userStudyFilter} onChange={e => { setUserStudyFilter(e.target.value); setUserPage(1); }} displayEmpty>
+            <MenuItem value="all">Alle richtingen</MenuItem>
+            <MenuItem value="TI">TI</MenuItem>
+            <MenuItem value="CSC">CSC</MenuItem>
+            <MenuItem value="SD">SD</MenuItem>
+            <MenuItem value="OPENICT">OPENICT</MenuItem>
+            <MenuItem value="AI">AI</MenuItem>
+          </Select>
+          <Select size="small" value={userSort} onChange={e => { setUserSort(e.target.value); setUserPage(1); }} displayEmpty>
+            <MenuItem value="created_desc">Aanmaakdatum (nieuw-oud)</MenuItem>
+            <MenuItem value="created_asc">Aanmaakdatum (oud-nieuw)</MenuItem>
+            <MenuItem value="name_asc">Naam (A-Z)</MenuItem>
+            <MenuItem value="name_desc">Naam (Z-A)</MenuItem>
+            <MenuItem value="email_asc">Email (A-Z)</MenuItem>
+            <MenuItem value="email_desc">Email (Z-A)</MenuItem>
+            <MenuItem value="lastlogin_desc">Laatste login (nieuw-oud)</MenuItem>
+            <MenuItem value="lastlogin_asc">Laatste login (oud-nieuw)</MenuItem>
+            <MenuItem value="prints_desc">Aantal prints (hoog-laag)</MenuItem>
+            <MenuItem value="prints_asc">Aantal prints (laag-hoog)</MenuItem>
+          </Select>
           <Button onClick={() => { setUserPage(1); fetchUsers(); }}>Zoek</Button>
           <Box sx={{ flex: 1 }} />
           {loadingUsers ? <CircularProgress size={24} /> : null}
@@ -416,12 +503,17 @@ const AdminPanelPage = () => {
       </TabPanel>
       {/* Printers */}
       <TabPanel value={tab} index={3}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Button variant="contained" color="success" startIcon={<FlashOn />} onClick={() => handleAllPower('on')} disabled={loading}>All ON</Button>
+          <Button variant="contained" color="error" startIcon={<PowerOff />} onClick={() => handleAllPower('off')} disabled={loading}>All OFF</Button>
+        </Box>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Naam</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Power</TableCell>
                 <TableCell>Acties</TableCell>
               </TableRow>
             </TableHead>
@@ -431,7 +523,25 @@ const AdminPanelPage = () => {
                   <TableCell>{printer.name}</TableCell>
                   <TableCell>{printer.maintenance ? 'Onderhoud' : 'Beschikbaar'}</TableCell>
                   <TableCell>
-                    <Button onClick={() => handleSetMaintenance(printer, !printer.maintenance)} variant="outlined">
+                    {relayStates[printer.id] === true ? (
+                      <Chip label="AAN" color="success" icon={<PowerSettingsNew />} />
+                    ) : relayStates[printer.id] === false ? (
+                      <Chip label="UIT" color="error" icon={<PowerOff />} />
+                    ) : (
+                      <Chip label="?" color="default" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant={relayStates[printer.id] ? 'outlined' : 'contained'}
+                      color={relayStates[printer.id] ? 'error' : 'success'}
+                      startIcon={relayStates[printer.id] ? <PowerOff /> : <PowerSettingsNew />}
+                      disabled={loadingRelay[printer.id]}
+                      onClick={() => setConfirmPower({ open: true, printer, action: relayStates[printer.id] ? 'off' : 'on' })}
+                    >
+                      {relayStates[printer.id] ? 'Uitschakelen' : 'Aanzetten'}
+                    </Button>
+                    <Button onClick={() => handleSetMaintenance(printer, !printer.maintenance)} variant="outlined" sx={{ ml: 1 }}>
                       {printer.maintenance ? 'Beschikbaar maken' : 'Op onderhoud'}
                     </Button>
                   </TableCell>
@@ -440,6 +550,32 @@ const AdminPanelPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        {/* Confirm power dialog */}
+        <Dialog open={confirmPower.open} onClose={() => setConfirmPower({ open: false, printer: null, action: null })}>
+          <DialogTitle>Bevestig power actie</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Weet je zeker dat je printer <b>{confirmPower.printer?.name}</b> wilt {confirmPower.action === 'on' ? 'AAN' : 'UIT'} zetten?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmPower({ open: false, printer: null, action: null })}>Annuleren</Button>
+            <Button
+              onClick={async () => {
+                setConfirmPower({ open: false, printer: null, action: null });
+                if (confirmPower.printer && confirmPower.action) {
+                  await handlePower(confirmPower.printer, confirmPower.action);
+                }
+              }}
+              color={confirmPower.action === 'on' ? 'success' : 'error'}
+              variant="contained"
+              autoFocus
+              disabled={loadingRelay[confirmPower.printer?.id]}
+            >
+              {confirmPower.action === 'on' ? 'AAN' : 'UIT'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </TabPanel>
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar({ open: false, message: '' })} message={snackbar.message} />
     </Box>

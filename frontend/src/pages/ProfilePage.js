@@ -65,17 +65,14 @@ const ProfilePage = () => {
     // Helper function to get correct avatar URL
     const getAvatarUrl = (avatarUrl) => {
         if (!avatarUrl) return null;
-        
-        // If it's already a full URL, return as is
+        // Als het een absolute URL is, return as is
         if (avatarUrl.startsWith('http')) {
             return avatarUrl;
         }
-        
-        // If it's a relative path, convert to backend URL
+        // Als het een relatieve uploads path is, return direct (werkt met nginx proxy en dev)
         if (avatarUrl.startsWith('/uploads/avatars/')) {
-            return `http://3dprinters:3001${avatarUrl}`;
+            return avatarUrl;
         }
-        
         return avatarUrl;
     };
 
@@ -199,16 +196,16 @@ const ProfilePage = () => {
                     
                     console.log('[AVATAR] Upload response:', response.data);
                     
-                    // Update profile with new avatar URL and refresh from server
-                    const newAvatarUrl = response.data.avatar_url;
+                    // Update profile with new avatar URL and add cache-busting param
+                    const newAvatarUrl = response.data.avatar_url + '?t=' + Date.now();
                     setProfile(prev => ({ ...prev, ...editForm, avatar_url: newAvatarUrl }));
-                    
+
                     // Force refresh profile data to ensure consistency
                     await fetchProfile();
-                    
+
                     // Also refresh the AuthContext user data to update navbar/other components
                     await refreshUser();
-                    
+
                     console.log('[AVATAR] Avatar updated successfully');
                 } catch (avatarError) {
                     console.error('Error uploading avatar:', avatarError);

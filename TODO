@@ -132,20 +132,51 @@
   - Check frontend: moet avatar_url opslaan in user object na upload
   - Ensure avatar wordt getoond in navbar na upload
   - Test: Upload → Refresh → Avatar moet zichtbaar blijven
-- [ ] **OctoPrint API data verbeteren**
-  - Haal meer accurate data op van OctoPrint API
-  - Implementeer real-time temperature monitoring
-  - Verbeter print progress accuracy
-  - Integreer webcam feeds
-  - Haal filament sensor data op (indien beschikbaar)
-- [ ] **Sonoff 4CH Pro R3 GPIO besturing via Admin Panel**
-  - Admin kan printers aan/uit zetten via GPIO pins
-  - Integreer met bestaande sonoff_scheduler.py script
-  - UI controls in admin panel (per printer on/off toggle)
-  - Status indicator (aan/uit) voor elke printer
-  - Safety: Bevestiging dialog voordat printer uit wordt gezet
-  - Log alle power on/off acties in audit trail
-  - Optioneel: Schedule automatic power off na X minuten inactiviteit
+- [x] **OctoPrint API data verbeteren** ✅
+  - DONE: getPrinterStatus haalt nu uitgebreide data op:
+    - ✅ Detailed temperature data (tool0, bed, heating status)
+    - ✅ Accurate print progress (completion %, printTime, printTimeLeft)
+    - ✅ Job file information (name, size, estimated time, filament usage)
+    - ✅ Webcam configuration (streamUrl, snapshotUrl, flip settings)
+    - ✅ SD card status
+    - ✅ State flags (operational, printing, paused, error)
+  - DONE: New functions added:
+    - ✅ getFilamentStatus() - Check multiple filament sensor plugins
+    - ✅ getTimelapseConfig() - Get timelapse settings
+    - ✅ getSystemCommands() - Available system commands
+    - ✅ getConnectionInfo() - Serial connection details
+    - ✅ getPluginData() - Generic plugin data retrieval
+  - TODO: Frontend moet updated worden om nieuwe data te tonen
+  - TODO: Real-time updates via socket.io voor temperature/progress
+- [x] **Sonoff 4CH Pro R3 GPIO besturing via Admin Panel** ✅ (Backend klaar)
+  - DONE: SonoffService created (backend/services/sonoffService.js)
+    - ✅ turnOn(relayId) - Turn specific relay ON
+    - ✅ turnOff(relayId) - Turn specific relay OFF
+    - ✅ toggle(relayId) - Toggle relay state
+    - ✅ turnAllOn() - Turn all 4 relays ON
+    - ✅ turnAllOff() - Turn all 4 relays OFF
+    - ✅ getStates() - Get current state of all relays
+    - ✅ controlPrinter(printerId, action) - Control printer power (1:1 mapping)
+  - DONE: Sonoff API routes (backend/routes/sonoff.js)
+    - ✅ POST /api/sonoff/relay/:relayId/on - Turn relay ON
+    - ✅ POST /api/sonoff/relay/:relayId/off - Turn relay OFF
+    - ✅ POST /api/sonoff/relay/:relayId/toggle - Toggle relay
+    - ✅ POST /api/sonoff/all/on - Turn all ON
+    - ✅ POST /api/sonoff/all/off - Turn all OFF
+    - ✅ GET /api/sonoff/states - Get all states
+    - ✅ POST /api/sonoff/printer/:printerId/:action - Control printer power
+  - DONE: Service registered in server.js with app.locals
+
+  - TODO: Frontend UI in AdminPanelPage.js (Printers tab)
+    - [x] Add power on/off toggle buttons per printer
+    - [x] Add "All ON" / "All OFF" buttons
+    - [x] Add status indicators (on/off) with colors
+    - [x] Add confirmation dialog before power off
+    - [x] Show loading state during power control
+    - [ ] Real-time relay state updates (optioneel, nice-to-have)
+      - Suggestie: Gebruik websockets/socket.io voor directe status updates zonder polling
+  - TODO: Audit logging voor power actions
+  - TODO: Test met hardware Sonoff 4CH Pro R3 op mini PC
 
 ---
 
@@ -156,6 +187,9 @@
 - [x] Pause/Unpause toggle (met kleuren)
 - [x] Block/Unblock toggle (met kleuren)
 - [x] Admin button in navbar voor org members
+- [x] Avatar upload fix - Avatar wordt nu correct getoond in navbar
+- [x] OctoPrint API data verbeteren - Uitgebreide status data (temp, progress, webcam, etc.)
+- [x] Sonoff GPIO backend - Service en API routes voor relay besturing
 
 ---
 

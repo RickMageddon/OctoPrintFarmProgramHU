@@ -72,7 +72,7 @@ class OctoPrintService {
         });
     }
 
-    // Get printer status
+    // Get printer status with comprehensive data
     async getPrinterStatus(printerId) {
         try {
             const printer = this.getPrinter(printerId);
@@ -82,28 +82,105 @@ class OctoPrintService {
 
             const client = this.createClient(printer);
             
-            // Get printer state
-            const stateResponse = await client.get('/api/printer');
-            const jobResponse = await client.get('/api/job');
+            // Get multiple endpoints for complete data
+            const [printerResponse, jobResponse, settingsResponse] = await Promise.all([
+                client.get('/api/printer').catch(err => ({ data: { error: err.message } })),
+                client.get('/api/job').catch(err => ({ data: { error: err.message } })),
+                client.get('/api/settings').catch(err => ({ data: { error: err.message } }))
+            ]);
             
+            const printerData = printerResponse.data;
+            const jobData = jobResponse.data;
+            const settingsData = settingsResponse.data;
+            
+            // Extract detailed temperature data
+            const temperature = {
+                tool0: printerData.temperature?.tool0 || null,
+                bed: printerData.temperature?.bed || null,
+                // Calculate if heating
+                toolHeating: printerData.temperature?.tool0 
+                    ? (printerData.temperature.tool0.target > 0 && 
+                       printerData.temperature.tool0.actual < printerData.temperature.tool0.target - 2)
+                    : false,
+                bedHeating: printerData.temperature?.bed
+                    ? (printerData.temperature.bed.target > 0 && 
+                       printerData.temperature.bed.actual < printerData.temperature.bed.target - 2)
+                    : false
+            };
+            
+            // Extract detailed job progress
+            const progress = jobData.progress ? {
+                completion: jobData.progress.completion || 0,
+                filepos: jobData.progress.filepos || 0,
+                printTime: jobData.progress.printTime || 0,
+                printTimeLeft: jobData.progress.printTimeLeft || null,
+                printTimeLeftOrigin: jobData.progress.printTimeLeftOrigin || null
+            } : null;
+            
+            // Extract job file information
+            const job = jobData.job ? {
+                file: {
+                    name: jobData.job.file?.name || null,
+                    origin: jobData.job.file?.origin || null,
+                    size: jobData.job.file?.size || null,
+                    date: jobData.job.file?.date || null
+                },
+                estimatedPrintTime: jobData.job.estimatedPrintTime || null,
+                filament: jobData.job.filament || null,
+                user: jobData.job.user || null
+            } : null;
+            
+            // Build comprehensive status
             return {
                 id: printerId,
                 name: printer.name,
-                state: stateResponse.data.state,
-                job: jobResponse.data,
-                temperature: stateResponse.data.temperature,
-                timestamp: new Date().toISOString()
+                url: printer.url,
+                state: {
+                    text: printerData.state?.text || 'Unknown',
+                    flags: printerData.state?.flags || {}
+                },
+                temperature,
+                progress,
+                job,
+                jobState: jobData.state || 'Unknown',
+                // Additional useful info
+                webcam: settingsData.webcam ? {
+                    streamUrl: settingsData.webcam.streamUrl || null,
+                    snapshotUrl: settingsData.webcam.snapshotUrl || null,
+                    flipH: settingsData.webcam.flipH || false,
+                    flipV: settingsData.webcam.flipV || false
+                } : null,
+                // SD card info if available
+                sd: printerData.sd ? {
+                    ready: printerData.sd.ready || false
+                } : null,
+                timestamp: new Date().toISOString(),
+                online: true
             };
         } catch (error) {
             console.error(`Error getting status for printer ${printerId}:`, error.message);
             return {
                 id: printerId,
                 name: this.getPrinter(printerId)?.name || `Printer ${printerId}`,
-                state: { text: 'Offline' },
-                job: null,
+                url: this.getPrinter(printerId)?.url || null,
+                state: { 
+                    text: 'Offline',
+                    flags: {
+                        operational: false,
+                        printing: false,
+                        paused: false,
+                        error: true
+                    }
+                },
                 temperature: null,
+                progress: null,
+                job: null,
+                jobState: 'Offline',
+                webcam: null,
+                sd: null,
                 error: error.message,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                online: false
             };
         }
     }
@@ -535,6 +612,110 @@ class OctoPrintService {
         } catch (error) {
             console.error(`Error sending command to printer ${printerId}:`, error.message);
             throw error;
+        }
+    }
+
+    // Get plugin data (for filament sensors, etc.)
+    async getPluginData(printerId, pluginName) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            const response = await client.get(`/api/plugin/${pluginName}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error getting plugin ${pluginName} data for printer ${printerId}:`, error.message);
+            return null;
+        }
+    }
+
+    // Get filament sensor status (if FilamentManager or similar plugin installed)
+    async getFilamentStatus(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            
+            // Try multiple common filament sensor plugins
+            const plugins = ['filamentmanager', 'filamentrevolutions', 'filamentsensorsimplified'];
+            
+            for (const plugin of plugins) {
+                try {
+                    const response = await client.get(`/api/plugin/${plugin}`);
+                    if (response.data) {
+                        return {
+                            plugin,
+                            data: response.data,
+                            available: true
+                        };
+                    }
+                } catch (err) {
+                    // Plugin not available, try next
+                    continue;
+                }
+            }
+            
+            return { available: false };
+        } catch (error) {
+            console.error(`Error getting filament status for printer ${printerId}:`, error.message);
+            return { available: false, error: error.message };
+        }
+    }
+
+    // Get timelapse configuration
+    async getTimelapseConfig(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            const response = await client.get('/api/timelapse');
+            return response.data;
+        } catch (error) {
+            console.error(`Error getting timelapse config for printer ${printerId}:`, error.message);
+            return null;
+        }
+    }
+
+    // Get system commands (restart, shutdown, etc.)
+    async getSystemCommands(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            const response = await client.get('/api/system/commands');
+            return response.data;
+        } catch (error) {
+            console.error(`Error getting system commands for printer ${printerId}:`, error.message);
+            return null;
+        }
+    }
+
+    // Get detailed printer connection info
+    async getConnectionInfo(printerId) {
+        try {
+            const printer = this.getPrinter(printerId);
+            if (!printer) {
+                throw new Error(`Printer ${printerId} not found`);
+            }
+
+            const client = this.createClient(printer);
+            const response = await client.get('/api/connection');
+            return response.data;
+        } catch (error) {
+            console.error(`Error getting connection info for printer ${printerId}:`, error.message);
+            return null;
         }
     }
 
