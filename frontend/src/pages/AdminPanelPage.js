@@ -235,10 +235,23 @@ const AdminPanelPage = () => {
     if (!window.confirm(`${maintenance ? 'Zet' : 'Haal'} ${printer.name} ${maintenance ? 'op' : 'van'} onderhoud?`)) return;
     try {
       await axios.post(`/api/printers/${printer.id}/maintenance`, { maintenance });
-      fetchPrinters();
+      
+      // Update local state immediately for instant feedback
+      setPrinters(prevPrinters => 
+        prevPrinters.map(p => 
+          p.id === printer.id ? { ...p, maintenance } : p
+        )
+      );
+      
       setSnackbar({ open: true, message: maintenance ? 'Printer op onderhoud' : 'Printer weer beschikbaar' });
+      
+      // Refresh from server to ensure consistency
+      fetchPrinters();
     } catch (err) {
       console.error('Maintenance failed', err);
+      setSnackbar({ open: true, message: 'Fout bij updaten onderhoudsstatus' });
+      // Refresh on error to revert optimistic update
+      fetchPrinters();
     }
   };
 
