@@ -565,7 +565,34 @@ const AdminPanelPage = () => {
       </TabPanel>
       
       <TabPanel value={tab} index={3}>
-        <Typography>Printers komt hier</Typography>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Naam</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Acties</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {printers.map((printer) => (
+                <TableRow key={printer.id}>
+                  <TableCell>{printer.name}</TableCell>
+                  <TableCell>{printer.maintenance ? 'Onderhoud' : 'Beschikbaar'}</TableCell>
+                  <TableCell>
+                    <Button 
+                      onClick={() => handleSetMaintenance(printer, !printer.maintenance)} 
+                      variant="outlined" 
+                      size="small"
+                    >
+                      {printer.maintenance ? 'Beschikbaar maken' : 'Op onderhoud'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </TabPanel>
       
       <Snackbar 
