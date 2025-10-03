@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Tabs, Tab, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, Snackbar, Tooltip, CircularProgress, Pagination, Card, CardContent, Grid, Chip
+  Box, Tabs, Tab, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, Snackbar, Tooltip, CircularProgress, Pagination, Card, CardContent, Grid, Chip, Switch, FormControlLabel
 } from '@mui/material';
 import { Edit, Delete, Warning, Pause, Block, Replay, ArrowUpward, ArrowDownward, Save, Info, Assessment, People, Print, CheckCircle, Error as ErrorIcon, Cancel, PowerSettingsNew, PowerOff, FlashOn } from '@mui/icons-material';
 import axios from 'axios';
@@ -610,24 +610,29 @@ const AdminPanelPage = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant={relayStates[printer.id] ? 'outlined' : 'contained'}
-                      color={relayStates[printer.id] ? 'error' : 'success'}
-                      startIcon={relayStates[printer.id] ? <PowerOff /> : <PowerSettingsNew />}
-                      disabled={loadingRelay[printer.id]}
-                      onClick={() => setConfirmPower({ open: true, printer, action: relayStates[printer.id] ? 'off' : 'on' })}
-                      size="small"
-                    >
-                      {relayStates[printer.id] ? 'Uitschakelen' : 'Aanzetten'}
-                    </Button>
-                    <Button 
-                      onClick={() => handleSetMaintenance(printer, !printer.maintenance)} 
-                      variant="outlined" 
-                      size="small"
-                      sx={{ ml: 1 }}
-                    >
-                      {printer.maintenance ? 'Beschikbaar maken' : 'Op onderhoud'}
-                    </Button>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={relayStates[printer.id] || false}
+                            onChange={() => setConfirmPower({ open: true, printer, action: relayStates[printer.id] ? 'off' : 'on' })}
+                            disabled={loadingRelay[printer.id]}
+                            color="success"
+                          />
+                        }
+                        label={relayStates[printer.id] ? 'Power AAN' : 'Power UIT'}
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={printer.maintenance || false}
+                            onChange={() => handleSetMaintenance(printer, !printer.maintenance)}
+                            color="warning"
+                          />
+                        }
+                        label={printer.maintenance ? 'Onderhoud' : 'Beschikbaar'}
+                      />
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
