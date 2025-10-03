@@ -3,51 +3,6 @@ import {
   Box, Tabs, Tab, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, Snackbar, Tooltip, CircularProgress, Pagination, Card, CardContent, Grid, Checkbox, FormControl, InputLabel, Chip
 } from '@mui/material';
 import { Edit, Delete, Warning, Pause, Block, Replay, ArrowUpward, ArrowDownward, Save, Info, Download, Assessment, TrendingUp, People, Print, CheckCircle, Error as ErrorIcon, Cancel, PowerSettingsNew, PowerOff, FlashOn } from '@mui/icons-material';
-  // Sonoff relay states
-  const [relayStates, setRelayStates] = useState({});
-  const [loadingRelay, setLoadingRelay] = useState({});
-  const [confirmPower, setConfirmPower] = useState({ open: false, printer: null, action: null });
-
-  // Fetch relay states
-  const fetchRelayStates = async () => {
-    try {
-      const res = await axios.get('/api/sonoff/states');
-      setRelayStates(res.data.states || {});
-    } catch (err) {
-      console.error('Error fetching relay states', err);
-    }
-  };
-
-  // Fetch relay states when Printers tab is active
-  useEffect(() => {
-    if (tab === 3) fetchRelayStates();
-  }, [tab]);
-  // Power control handlers
-  const handlePower = async (printer, action) => {
-    setLoadingRelay(r => ({ ...r, [printer.id]: true }));
-    try {
-      await axios.post(`/api/sonoff/printer/${printer.id}/${action}`);
-      setSnackbar({ open: true, message: `Printer ${printer.name} ${action === 'on' ? 'AAN' : 'UIT'}` });
-      await fetchRelayStates();
-    } catch (err) {
-      setSnackbar({ open: true, message: `Fout bij power ${action}` });
-    } finally {
-      setLoadingRelay(r => ({ ...r, [printer.id]: false }));
-    }
-  };
-
-  const handleAllPower = async (action) => {
-    setLoading(true);
-    try {
-      await axios.post(`/api/sonoff/all/${action}`);
-      setSnackbar({ open: true, message: `Alle printers ${action === 'on' ? 'AAN' : 'UIT'}` });
-      await fetchRelayStates();
-    } catch (err) {
-      setSnackbar({ open: true, message: `Fout bij alles ${action}` });
-    } finally {
-      setLoading(false);
-    }
-  };
 import axios from 'axios';
 
 function TabPanel(props) {
