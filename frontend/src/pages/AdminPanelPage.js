@@ -565,12 +565,33 @@ const AdminPanelPage = () => {
       </TabPanel>
       
       <TabPanel value={tab} index={3}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Button 
+            variant="contained" 
+            color="success" 
+            startIcon={<FlashOn />} 
+            onClick={() => handleAllPower('on')} 
+            disabled={loading}
+          >
+            All ON
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            startIcon={<PowerOff />} 
+            onClick={() => handleAllPower('off')} 
+            disabled={loading}
+          >
+            All OFF
+          </Button>
+        </Box>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Naam</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell>Power</TableCell>
                 <TableCell>Acties</TableCell>
               </TableRow>
             </TableHead>
@@ -580,10 +601,30 @@ const AdminPanelPage = () => {
                   <TableCell>{printer.name}</TableCell>
                   <TableCell>{printer.maintenance ? 'Onderhoud' : 'Beschikbaar'}</TableCell>
                   <TableCell>
+                    {relayStates[printer.id] === true ? (
+                      <Chip label="AAN" color="success" icon={<PowerSettingsNew />} />
+                    ) : relayStates[printer.id] === false ? (
+                      <Chip label="UIT" color="error" icon={<PowerOff />} />
+                    ) : (
+                      <Chip label="?" color="default" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant={relayStates[printer.id] ? 'outlined' : 'contained'}
+                      color={relayStates[printer.id] ? 'error' : 'success'}
+                      startIcon={relayStates[printer.id] ? <PowerOff /> : <PowerSettingsNew />}
+                      disabled={loadingRelay[printer.id]}
+                      onClick={() => setConfirmPower({ open: true, printer, action: relayStates[printer.id] ? 'off' : 'on' })}
+                      size="small"
+                    >
+                      {relayStates[printer.id] ? 'Uitschakelen' : 'Aanzetten'}
+                    </Button>
                     <Button 
                       onClick={() => handleSetMaintenance(printer, !printer.maintenance)} 
                       variant="outlined" 
                       size="small"
+                      sx={{ ml: 1 }}
                     >
                       {printer.maintenance ? 'Beschikbaar maken' : 'Op onderhoud'}
                     </Button>
@@ -593,6 +634,32 @@ const AdminPanelPage = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        {/* Confirm power dialog */}
+        <Dialog open={confirmPower.open} onClose={() => setConfirmPower({ open: false, printer: null, action: null })}>
+          <DialogTitle>Bevestig power actie</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Weet je zeker dat je printer <b>{confirmPower.printer?.name}</b> wilt {confirmPower.action === 'on' ? 'AAN' : 'UIT'} zetten?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmPower({ open: false, printer: null, action: null })}>Annuleren</Button>
+            <Button
+              onClick={async () => {
+                setConfirmPower({ open: false, printer: null, action: null });
+                if (confirmPower.printer && confirmPower.action) {
+                  await handlePower(confirmPower.printer, confirmPower.action);
+                }
+              }}
+              color={confirmPower.action === 'on' ? 'success' : 'error'}
+              variant="contained"
+              autoFocus
+              disabled={loadingRelay[confirmPower.printer?.id]}
+            >
+              {confirmPower.action === 'on' ? 'AAN' : 'UIT'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </TabPanel>
       
       <Snackbar 
