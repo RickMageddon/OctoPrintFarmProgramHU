@@ -35,6 +35,14 @@ const Navbar = () => {
   const [printersOnline, setPrintersOnline] = useState(0);
   const [totalPrinters] = useState(3);
 
+  // Helper function to get correct avatar URL
+  const getAvatarUrl = (avatarUrl) => {
+    if (!avatarUrl) return null;
+    if (avatarUrl.startsWith('http')) return avatarUrl;
+    if (avatarUrl.startsWith('/uploads/avatars/')) return avatarUrl;
+    return avatarUrl;
+  };
+
   // Fetch printer statuses
   useEffect(() => {
     const fetchPrinterStatus = async () => {
@@ -174,7 +182,7 @@ const Navbar = () => {
               }}
             >
               <Avatar 
-                src={user?.avatar_url} 
+                src={getAvatarUrl(user?.avatar_url)} 
                 sx={{ width: 32, height: 32 }}
               >
                 {user?.username?.charAt(0).toUpperCase()}
@@ -182,7 +190,7 @@ const Navbar = () => {
             </Badge>
           ) : (
             <Avatar 
-              src={user?.avatar_url} 
+              src={getAvatarUrl(user?.avatar_url)} 
               sx={{ width: 32, height: 32 }}
             >
               {user?.username?.charAt(0).toUpperCase()}
