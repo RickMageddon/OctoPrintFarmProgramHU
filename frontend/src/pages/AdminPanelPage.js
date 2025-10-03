@@ -599,7 +599,7 @@ const AdminPanelPage = () => {
               {printers.map((printer) => (
                 <TableRow key={printer.id}>
                   <TableCell>{printer.name}</TableCell>
-                  <TableCell>{printer.maintenance ? 'Onderhoud' : 'Beschikbaar'}</TableCell>
+                  <TableCell>{printer.maintenance ? 'Maintenance' : (printer.state?.text || 'Unknown')}</TableCell>
                   <TableCell>
                     {relayStates[printer.id] === true ? (
                       <Chip label="AAN" color="success" icon={<PowerSettingsNew />} />
