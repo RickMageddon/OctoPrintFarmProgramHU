@@ -279,7 +279,93 @@ const AdminPanelPage = () => {
       </Tabs>
       
       <TabPanel value={tab} index={0}>
-        <Typography>Dashboard komt hier</Typography>
+        {loadingStats ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+            <CircularProgress />
+          </Box>
+        ) : stats ? (
+          <Grid container spacing={3}>
+            {/* User Stats Cards */}
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Totaal Gebruikers</Typography>
+                  <Typography variant="h3">{stats.users.total_users}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {stats.users.admin_users} admins • {stats.users.verified_users} geverifieerd
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Actieve Gebruikers</Typography>
+                  <Typography variant="h3">{stats.users.active_users_7d}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Laatste 7 dagen • {stats.users.active_users_30d} laatste 30d
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Print Jobs</Typography>
+                  <Typography variant="h3">{stats.jobs.total_jobs}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                    <Chip icon={<CheckCircle />} label={`${stats.jobs.completed_jobs} voltooid`} color="success" size="small" />
+                    <Chip icon={<ErrorIcon />} label={`${stats.jobs.failed_jobs} mislukt`} color="error" size="small" />
+                    <Chip icon={<Cancel />} label={`${stats.jobs.cancelled_jobs} geannuleerd`} size="small" />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>Huidige Wachtrij</Typography>
+                  <Typography variant="h3">{stats.jobs.queued_jobs + stats.jobs.printing_jobs}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {stats.jobs.printing_jobs} aan het printen • {stats.jobs.queued_jobs} in wachtrij
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            {/* Recent Activity */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Recente Activiteit</Typography>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Gebruiker</TableCell>
+                          <TableCell>Actie</TableCell>
+                          <TableCell>Details</TableCell>
+                          <TableCell>Tijd</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {stats.recentActivity.map((log, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{log.username}</TableCell>
+                            <TableCell>{log.action}</TableCell>
+                            <TableCell>{log.details}</TableCell>
+                            <TableCell>{new Date(log.timestamp).toLocaleString('nl-NL')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        ) : (
+          <Typography>Geen data beschikbaar</Typography>
+        )}
       </TabPanel>
       
       <TabPanel value={tab} index={1}>
