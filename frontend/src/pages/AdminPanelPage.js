@@ -369,7 +369,156 @@ const AdminPanelPage = () => {
       </TabPanel>
       
       <TabPanel value={tab} index={1}>
-        <Typography>Gebruikers komt hier</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <TextField placeholder="Zoek gebruikers..." size="small" value={userSearch} onChange={e => setUserSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { setUserPage(1); fetchUsers(); } }} />
+          <Select size="small" value={userStatusFilter} onChange={e => { setUserStatusFilter(e.target.value); setUserPage(1); }} displayEmpty>
+            <MenuItem value="all">Alle statussen</MenuItem>
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="blocked">Geblokkeerd</MenuItem>
+            <MenuItem value="paused">Gepauzeerd</MenuItem>
+            <MenuItem value="active">Actief</MenuItem>
+            <MenuItem value="github_linked">GitHub gekoppeld</MenuItem>
+            <MenuItem value="not_linked">Niet gekoppeld</MenuItem>
+          </Select>
+          <Select size="small" value={userStudyFilter} onChange={e => { setUserStudyFilter(e.target.value); setUserPage(1); }} displayEmpty>
+            <MenuItem value="all">Alle richtingen</MenuItem>
+            <MenuItem value="TI">TI</MenuItem>
+            <MenuItem value="CSC">CSC</MenuItem>
+            <MenuItem value="SD">SD</MenuItem>
+            <MenuItem value="OPENICT">OPENICT</MenuItem>
+            <MenuItem value="AI">AI</MenuItem>
+          </Select>
+          <Select size="small" value={userSort} onChange={e => { setUserSort(e.target.value); setUserPage(1); }} displayEmpty>
+            <MenuItem value="created_desc">Aanmaakdatum (nieuw-oud)</MenuItem>
+            <MenuItem value="created_asc">Aanmaakdatum (oud-nieuw)</MenuItem>
+            <MenuItem value="name_asc">Naam (A-Z)</MenuItem>
+            <MenuItem value="name_desc">Naam (Z-A)</MenuItem>
+            <MenuItem value="email_asc">Email (A-Z)</MenuItem>
+            <MenuItem value="email_desc">Email (Z-A)</MenuItem>
+            <MenuItem value="lastlogin_desc">Laatste login (nieuw-oud)</MenuItem>
+            <MenuItem value="lastlogin_asc">Laatste login (oud-nieuw)</MenuItem>
+            <MenuItem value="prints_desc">Aantal prints (hoog-laag)</MenuItem>
+            <MenuItem value="prints_asc">Aantal prints (laag-hoog)</MenuItem>
+          </Select>
+          <Button onClick={() => { setUserPage(1); fetchUsers(); }}>Zoek</Button>
+          <Box sx={{ flex: 1 }} />
+          {loadingUsers ? <CircularProgress size={24} /> : null}
+        </Box>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Email</TableCell>
+                <TableCell>Gebruikersnaam</TableCell>
+                <TableCell>Admin</TableCell>
+                <TableCell>GitHub</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Acties</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id} hover>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{user.is_admin ? 'Ja' : 'Nee'}</TableCell>
+                  <TableCell>{user.github_username || '-'}</TableCell>
+                  <TableCell sx={{ color: user.blocked ? 'red' : user.paused ? 'orange' : 'green' }}>
+                    {user.blocked ? 'Geblokkeerd' : user.paused ? 'Gepauzeerd' : 'Actief'}
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip title="Bekijk details/logs"><IconButton onClick={() => openUserDetails(user)}><Info /></IconButton></Tooltip>
+                    <Tooltip title="Bewerk gebruiker"><IconButton onClick={() => handleEditUser(user)}><Edit /></IconButton></Tooltip>
+                    <Tooltip title="Reset GitHub koppeling"><IconButton onClick={() => handleResetGithub(user)}><Replay /></IconButton></Tooltip>
+                    <Tooltip title="Waarschuwing"><IconButton onClick={() => setWarningDialog({ open: true, user, text: '' })}><Warning /></IconButton></Tooltip>
+                    <Tooltip title={user.paused ? "Hervatten" : "Pauzeren"}><IconButton onClick={() => handlePauseUser(user)} color={user.paused ? "warning" : "default"}><Pause /></IconButton></Tooltip>
+                    <Tooltip title={user.blocked ? "Deblokkeren" : "Blokkeren"}><IconButton onClick={() => handleBlockUser(user)} color={user.blocked ? "error" : "default"}><Block /></IconButton></Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Pagination count={Math.ceil((usersTotal || 0) / USERS_PER_PAGE) || 1} page={userPage} onChange={(_, v) => { setUserPage(v); }} />
+        </Box>
+        {/* Edit user dialog */}
+        <Dialog open={!!editUser} onClose={() => setEditUser(null)}>
+          <DialogTitle>Gebruiker aanpassen</DialogTitle>
+          <DialogContent>
+            <TextField label="Email" value={editUser?.email || ''} fullWidth margin="dense" disabled />
+            <TextField label="Gebruikersnaam" value={editUser?.username || ''} fullWidth margin="dense" onChange={e => setEditUser({ ...editUser, username: e.target.value })} />
+            <Select label="Admin" value={editUser?.is_admin ? 1 : 0} fullWidth margin="dense" onChange={e => setEditUser({ ...editUser, is_admin: e.target.value })}>
+              <MenuItem value={1}>Ja</MenuItem>
+              <MenuItem value={0}>Nee</MenuItem>
+            </Select>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditUser(null)}>Annuleren</Button>
+            <Button onClick={handleSaveUser} startIcon={<Save />}>Opslaan</Button>
+          </DialogActions>
+        </Dialog>
+        {/* Warning dialog */}
+        <Dialog open={warningDialog.open} onClose={() => setWarningDialog({ open: false, user: null, text: '' })}>
+          <DialogTitle>Waarschuwing plaatsen</DialogTitle>
+          <DialogContent>
+            <TextField label="Waarschuwing" value={warningDialog.text} onChange={e => setWarningDialog({ ...warningDialog, text: e.target.value })} fullWidth multiline minRows={3} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setWarningDialog({ open: false, user: null, text: '' })}>Annuleren</Button>
+            <Button onClick={handleWarning} startIcon={<Warning />}>Plaatsen</Button>
+          </DialogActions>
+        </Dialog>
+        {/* User details dialog */}
+        <Dialog open={viewUserDetails.open} onClose={closeUserDetails} maxWidth="md" fullWidth>
+          <DialogTitle>Gebruiker Details: {viewUserDetails.user?.username}</DialogTitle>
+          <DialogContent>
+            {viewUserDetails.loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>
+            ) : (
+              <>
+                <Typography variant="subtitle2" gutterBottom>Account Info</Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2">Email: {viewUserDetails.user?.email}</Typography>
+                  <Typography variant="body2">GitHub: {viewUserDetails.user?.github_username || 'Niet gekoppeld'}</Typography>
+                  <Typography variant="body2">Admin: {viewUserDetails.user?.is_admin ? 'Ja' : 'Nee'}</Typography>
+                  <Typography variant="body2">Status: {viewUserDetails.user?.blocked ? 'Geblokkeerd' : viewUserDetails.user?.paused ? 'Gepauzeerd' : 'Actief'}</Typography>
+                  {viewUserDetails.user?.warning && (
+                    <Typography variant="body2" color="error">Waarschuwing: {viewUserDetails.user.warning}</Typography>
+                  )}
+                </Box>
+                <Typography variant="subtitle2" gutterBottom>Recente Activiteit</Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Actie</TableCell>
+                        <TableCell>Details</TableCell>
+                        <TableCell>Tijd</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {viewUserDetails.logs.length === 0 ? (
+                        <TableRow><TableCell colSpan={3} align="center">Geen logs gevonden</TableCell></TableRow>
+                      ) : (
+                        viewUserDetails.logs.map((log, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{log.action}</TableCell>
+                            <TableCell>{log.details}</TableCell>
+                            <TableCell>{new Date(log.timestamp).toLocaleString('nl-NL')}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeUserDetails}>Sluiten</Button>
+          </DialogActions>
+        </Dialog>
       </TabPanel>
       
       <TabPanel value={tab} index={2}>
