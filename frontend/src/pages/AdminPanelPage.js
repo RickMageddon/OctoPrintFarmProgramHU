@@ -16,7 +16,44 @@ function TabPanel(props) {
 
 const AdminPanelPage = () => {
   const [tab, setTab] = useState(0);
+  
+  // Dashboard
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  
+  // Users
+  const [users, setUsers] = useState([]);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [editUser, setEditUser] = useState(null);
+  const [warningDialog, setWarningDialog] = useState({ open: false, user: null, text: '' });
+  const [userSearch, setUserSearch] = useState('');
+  const [userPage, setUserPage] = useState(1);
+  const USERS_PER_PAGE = 10;
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [viewUserDetails, setViewUserDetails] = useState({ open: false, user: null, logs: [] });
+  
+  // Filtering & sorting
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [userStudyFilter, setUserStudyFilter] = useState('all');
+  const [userSort, setUserSort] = useState('created_desc');
+  
+  // Queue
+  const [queue, setQueue] = useState([]);
+  const [queueSearch, setQueueSearch] = useState('');
+  const [queuePage, setQueuePage] = useState(1);
+  const QUEUE_PER_PAGE = 10;
+  
+  // Printers
+  const [printers, setPrinters] = useState([]);
+  
+  // Sonoff relay states
+  const [relayStates, setRelayStates] = useState({});
+  const [loadingRelay, setLoadingRelay] = useState({});
+  const [confirmPower, setConfirmPower] = useState({ open: false, printer: null, action: null });
+  
+  // Snackbar
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [loading, setLoading] = useState(false);
 
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
