@@ -302,11 +302,15 @@ const DashboardPage = () => {
                     <InputLabel id="printer-select-label">Printer</InputLabel>
                     <Select labelId="printer-select-label" value={printer} label="Printer" onChange={e => setPrinter(e.target.value)}>
                       <MenuItem value="auto">Automatisch toewijzen (aanbevolen)</MenuItem>
-                      {printerStatus.map(p => (
-                        <MenuItem key={p.id} value={p.id} disabled={p.state?.text !== 'Operational'}>
-                          {p.name} {p.state?.text !== 'Operational' ? `(${p.state?.text})` : ''}
-                        </MenuItem>
-                      ))}
+                      {printerStatus.map(p => {
+                        const isAvailable = p.state?.text === 'Operational' && !p.maintenance;
+                        const statusText = p.maintenance ? 'Maintenance' : p.state?.text;
+                        return (
+                          <MenuItem key={p.id} value={p.id} disabled={!isAvailable}>
+                            {p.name} {!isAvailable ? `(${statusText})` : ''}
+                          </MenuItem>
+                        );
+                      })}
                     </Select>
                   </FormControl>
                   <Typography variant="subtitle1" fontWeight={600} mb={1}>📊 Prioriteit</Typography>

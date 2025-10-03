@@ -592,7 +592,7 @@ const AdminPanelPage = () => {
                 <TableCell>Naam</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Power</TableCell>
-                <TableCell>Acties</TableCell>
+                <TableCell>Onderhoud</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

@@ -67,7 +67,9 @@ const PrintersPage = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const getStatusColor = (state) => {
+    const getStatusColor = (printer) => {
+        if (printer?.maintenance) return 'warning';
+        const state = printer?.state;
         if (!state?.text) return 'default';
         switch (state.text.toLowerCase()) {
             case 'operational': return 'success';
@@ -79,7 +81,9 @@ const PrintersPage = () => {
         }
     };
 
-    const getStatusIcon = (state) => {
+    const getStatusIcon = (printer) => {
+        if (printer?.maintenance) return <Settings color="warning" />;
+        const state = printer?.state;
         if (!state?.text) return <Error />;
         switch (state.text.toLowerCase()) {
             case 'operational': return <CheckCircle color="success" />;
@@ -89,6 +93,11 @@ const PrintersPage = () => {
             case 'offline': return <Error color="disabled" />;
             default: return <Warning />;
         }
+    };
+
+    const getStatusText = (printer) => {
+        if (printer?.maintenance) return 'Maintenance';
+        return printer?.state?.text || 'Unknown';
     };
 
     const formatTemp = (temp) => {
@@ -185,14 +194,14 @@ const PrintersPage = () => {
                                             {/* Printer Header */}
                                             <Box display="flex" alignItems="center" mb={3}>
                                                 <Box display="flex" alignItems="center" flex={1}>
-                                                    {getStatusIcon(printer.state)}
+                                                    {getStatusIcon(printer)}
                                                     <Box ml={2}>
                                                         <Typography variant="h6">
                                                             {printer.name || `Printer ${index + 1}`}
                                                         </Typography>
                                                         <Chip
-                                                            label={printer.state?.text || 'Offline'}
-                                                            color={getStatusColor(printer.state)}
+                                                            label={getStatusText(printer)}
+                                                            color={getStatusColor(printer)}
                                                             size="small"
                                                         />
                                                     </Box>
