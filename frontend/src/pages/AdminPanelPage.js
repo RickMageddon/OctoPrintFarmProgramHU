@@ -522,7 +522,46 @@ const AdminPanelPage = () => {
       </TabPanel>
       
       <TabPanel value={tab} index={2}>
-        <Typography>Wachtrij komt hier</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          <TextField 
+            placeholder="Zoek in wachtrij..." 
+            size="small" 
+            value={queueSearch} 
+            onChange={e => setQueueSearch(e.target.value)} 
+            onKeyDown={e => { if (e.key === 'Enter') fetchQueue(); }} 
+          />
+          <Button onClick={() => { setQueuePage(1); fetchQueue(); }}>Zoek</Button>
+          <Box sx={{ flex: 1 }} />
+        </Box>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Bestand</TableCell>
+                <TableCell>Gebruiker</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Acties</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {queue.slice((queuePage - 1) * QUEUE_PER_PAGE, queuePage * QUEUE_PER_PAGE).map((job, idx) => (
+                <TableRow key={job.id}>
+                  <TableCell>{job.filename}</TableCell>
+                  <TableCell>{job.username}</TableCell>
+                  <TableCell>{job.status}</TableCell>
+                  <TableCell>
+                    <Tooltip title="Verwijder job"><IconButton onClick={() => handleDeleteQueue(job)}><Delete /></IconButton></Tooltip>
+                    <Tooltip title="Naar boven"><IconButton onClick={() => handleMoveQueue(job, 'up')} disabled={idx === 0}><ArrowUpward /></IconButton></Tooltip>
+                    <Tooltip title="Naar beneden"><IconButton onClick={() => handleMoveQueue(job, 'down')} disabled={idx === queue.length - 1}><ArrowDownward /></IconButton></Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Pagination count={Math.ceil((queue.length || 0) / QUEUE_PER_PAGE) || 1} page={queuePage} onChange={(_, v) => setQueuePage(v)} />
+        </Box>
       </TabPanel>
       
       <TabPanel value={tab} index={3}>
