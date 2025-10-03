@@ -190,6 +190,20 @@ class OctoPrintService {
         const statuses = await Promise.all(
             this.printers.map(printer => this.getPrinterStatus(printer.id))
         );
+        
+        // Add maintenance status from database
+        if (this.db) {
+            for (const status of statuses) {
+                try {
+                    const row = await this.db.get('SELECT maintenance FROM printer_status WHERE id = ?', [status.id]);
+                    status.maintenance = row ? Boolean(row.maintenance) : false;
+                } catch (err) {
+                    console.error(`Error fetching maintenance status for printer ${status.id}:`, err);
+                    status.maintenance = false;
+                }
+            }
+        }
+        
         return statuses;
     }
 
