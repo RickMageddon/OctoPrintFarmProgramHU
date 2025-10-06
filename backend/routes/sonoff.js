@@ -168,4 +168,60 @@ router.post('/printer/:printerId/:action', requireAuth, requireVerifiedEmail, re
     }
 });
 
+// GET /api/sonoff/serial-ports - List available serial ports
+router.get('/serial-ports', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        
+        // List USB serial devices
+        const { stdout } = await execAsync('ls -1 /dev/ttyUSB* /dev/ttyACM* /dev/serial* 2>/dev/null || echo ""');
+        const ports = stdout.trim().split('\n').filter(p => p.length > 0);
+        
+        res.json({ success: true, ports });
+    } catch (error) {
+        console.error('Error listing serial ports:', error);
+        res.json({ success: true, ports: [] }); // Return empty array on error
+    }
+});
+
+// GET /api/sonoff/config - Get current Sonoff configuration
+router.get('/config', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const sonoffService = req.app.locals.sonoffService;
+        
+        if (!sonoffService) {
+            return res.status(503).json({ error: 'Sonoff service not available' });
+        }
+        
+        const config = sonoffService.getConfig();
+        res.json({ success: true, config });
+    } catch (error) {
+        console.error('Error getting Sonoff config:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/sonoff/config - Update Sonoff configuration
+router.post('/config', requireAuth, requireVerifiedEmail, requireAdmin, async (req, res) => {
+    try {
+        const { serialPort, baudRate } = req.body;
+        const sonoffService = req.app.locals.sonoffService;
+        
+        if (!sonoffService) {
+            return res.status(503).json({ error: 'Sonoff service not available' });
+        }
+        
+        sonoffService.updateConfig(serialPort, baudRate);
+        
+        console.log(`👤 Admin ${req.user.username} updated Sonoff config: ${serialPort} @ ${baudRate}`);
+        
+        res.json({ success: true, message: 'Configuration updated' });
+    } catch (error) {
+        console.error('Error updating Sonoff config:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

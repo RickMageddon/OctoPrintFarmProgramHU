@@ -190,6 +190,32 @@ class SonoffService {
             throw new Error(`Invalid action: ${action}. Must be 'on' or 'off'.`);
         }
     }
+
+    /**
+     * Get current configuration
+     */
+    getConfig() {
+        return {
+            serialPort: this.serialPort,
+            baudRate: this.baudRate
+        };
+    }
+
+    /**
+     * Update configuration
+     * @param {string} serialPort - New serial port
+     * @param {string} baudRate - New baud rate
+     */
+    updateConfig(serialPort, baudRate) {
+        if (serialPort) {
+            this.serialPort = serialPort;
+            console.log(`🔌 Updated serial port to: ${serialPort}`);
+        }
+        if (baudRate) {
+            this.baudRate = baudRate;
+            console.log(`⚡ Updated baud rate to: ${baudRate}`);
+        }
+    }
 }
 
 module.exports = SonoffService;

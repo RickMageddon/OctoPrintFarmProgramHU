@@ -4,9 +4,11 @@ WORKDIR /app
 
 
 
-# Install dependencies and sqlite3 CLI as root
+# Install dependencies, sqlite3 CLI, and Python for serial communication
 COPY package*.json ./
-RUN apk add --no-cache sqlite sqlite-libs && npm install --only=production
+RUN apk add --no-cache sqlite sqlite-libs python3 py3-pip && \
+    pip3 install --break-system-packages pyserial && \
+    npm install --only=production
 
 # Copy source code
 COPY . .

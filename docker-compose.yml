@@ -61,11 +61,16 @@ services:
     build: ./backend
     container_name: octoprint_farm_backend
     restart: unless-stopped
+    privileged: true  # Required for USB/Serial access
     ports:
       - "3001:3001"
     volumes:
       - ./database:/app/database
       - ./uploads:/app/uploads
+      - /dev:/dev  # Mount all devices for USB detection
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"  # FT232 adapter for Sonoff
+      - "/dev/ttyUSB1:/dev/ttyUSB1"  # Backup if adapter on different port
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -83,6 +88,8 @@ services:
       - OCTOPRINT1_API_KEY=${OCTOPRINT1_API_KEY}
       - OCTOPRINT2_API_KEY=${OCTOPRINT2_API_KEY}
       - OCTOPRINT3_API_KEY=${OCTOPRINT3_API_KEY}
+      - SONOFF_SERIAL_PORT=${SONOFF_SERIAL_PORT:-/dev/ttyUSB0}
+      - SONOFF_BAUDRATE=${SONOFF_BAUDRATE:-115200}
     depends_on:
       - octoprint1
       - octoprint2

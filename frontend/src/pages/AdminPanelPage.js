@@ -51,6 +51,11 @@ const AdminPanelPage = () => {
   const [loadingRelay, setLoadingRelay] = useState({});
   const [confirmPower, setConfirmPower] = useState({ open: false, printer: null, action: null });
   
+  // Sonoff configuration
+  const [sonoffConfig, setSonoffConfig] = useState({ serialPort: '', baudRate: '' });
+  const [availablePorts, setAvailablePorts] = useState([]);
+  const [sonoffConfigDialog, setSonoffConfigDialog] = useState(false);
+  
   // Snackbar
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [loading, setLoading] = useState(false);
@@ -129,6 +134,25 @@ const AdminPanelPage = () => {
       setRelayStates(res.data.states || {});
     } catch (err) {
       console.error('Error fetching relay states', err);
+    }
+  };
+
+  const fetchSonoffConfig = async () => {
+    try {
+      const res = await axios.get('/api/sonoff/config');
+      setSonoffConfig(res.data.config || { serialPort: '/dev/ttyUSB0', baudRate: '115200' });
+    } catch (err) {
+      console.error('Error fetching Sonoff config', err);
+    }
+  };
+
+  const fetchAvailablePorts = async () => {
+    try {
+      const res = await axios.get('/api/sonoff/serial-ports');
+      setAvailablePorts(res.data.ports || []);
+    } catch (err) {
+      console.error('Error fetching serial ports', err);
+      setAvailablePorts([]);
     }
   };
 
@@ -280,6 +304,23 @@ const AdminPanelPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveSonoffConfig = async () => {
+    try {
+      await axios.post('/api/sonoff/config', sonoffConfig);
+      setSnackbar({ open: true, message: 'Sonoff configuratie opgeslagen' });
+      setSonoffConfigDialog(false);
+    } catch (err) {
+      console.error('Error saving Sonoff config', err);
+      setSnackbar({ open: true, message: 'Fout bij opslaan configuratie' });
+    }
+  };
+
+  const handleOpenSonoffConfig = async () => {
+    await fetchSonoffConfig();
+    await fetchAvailablePorts();
+    setSonoffConfigDialog(true);
   };
 
   return (
@@ -578,7 +619,7 @@ const AdminPanelPage = () => {
       </TabPanel>
       
       <TabPanel value={tab} index={3}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
           <Button 
             variant="contained" 
             color="success" 
@@ -596,6 +637,14 @@ const AdminPanelPage = () => {
             disabled={loading}
           >
             All OFF
+          </Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button 
+            variant="outlined" 
+            startIcon={<Settings />} 
+            onClick={handleOpenSonoffConfig}
+          >
+            Sonoff Configuratie
           </Button>
         </Box>
         <TableContainer component={Paper}>
@@ -680,6 +729,63 @@ const AdminPanelPage = () => {
         </Dialog>
       </TabPanel>
       
+      {/* Sonoff Configuration Dialog */}
+      <Dialog open={sonoffConfigDialog} onClose={() => setSonoffConfigDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Sonoff Configuratie</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              select
+              label="Seriële Poort"
+              value={sonoffConfig.serialPort}
+              onChange={(e) => setSonoffConfig({ ...sonoffConfig, serialPort: e.target.value })}
+              fullWidth
+              helperText="Selecteer de USB/Serial poort voor FT232 adapter"
+            >
+              {availablePorts.length === 0 ? (
+                <MenuItem value="">Geen poorten gevonden</MenuItem>
+              ) : (
+                availablePorts.map((port) => (
+                  <MenuItem key={port} value={port}>
+                    {port}
+                  </MenuItem>
+                ))
+              )}
+              <MenuItem value="/dev/ttyUSB0">/dev/ttyUSB0 (standaard)</MenuItem>
+              <MenuItem value="/dev/ttyUSB1">/dev/ttyUSB1</MenuItem>
+              <MenuItem value="/dev/ttyACM0">/dev/ttyACM0</MenuItem>
+            </TextField>
+
+            <TextField
+              select
+              label="Baud Rate"
+              value={sonoffConfig.baudRate}
+              onChange={(e) => setSonoffConfig({ ...sonoffConfig, baudRate: e.target.value })}
+              fullWidth
+              helperText="Tasmota standaard: 115200"
+            >
+              <MenuItem value="9600">9600</MenuItem>
+              <MenuItem value="19200">19200</MenuItem>
+              <MenuItem value="38400">38400</MenuItem>
+              <MenuItem value="57600">57600</MenuItem>
+              <MenuItem value="115200">115200 (Tasmota)</MenuItem>
+            </TextField>
+
+            <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+              <Typography variant="body2" color="info.dark">
+                <strong>ℹ️ Info:</strong> Verbind de FT232 adapter met de Sonoff en controleer of de USB poort zichtbaar is in de Docker container.
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSonoffConfigDialog(false)}>Annuleren</Button>
+          <Button onClick={handleSaveSonoffConfig} variant="contained" color="primary">
+            Opslaan
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar 
         open={snackbar.open} 
         autoHideDuration={3000} 
