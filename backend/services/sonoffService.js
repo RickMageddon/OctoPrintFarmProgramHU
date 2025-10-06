@@ -4,17 +4,17 @@ const execPromise = util.promisify(exec);
 
 class SonoffService {
     constructor() {
-        // Sonoff 4CH Pro R3 relay commands (hex format)
+        // Tasmota serial commands for 4CH relays
         this.relayCommands = {
-            1: { on: 'A00101A2', off: 'A00100A1' },  // Relay 1 (Printer 1)
-            2: { on: 'A00201A3', off: 'A00200A2' },  // Relay 2 (Printer 2)
-            3: { on: 'A00301A4', off: 'A00300A3' },  // Relay 3 (Printer 3)
-            4: { on: 'A00401A5', off: 'A00400A4' }   // Relay 4 (Printer 4 / spare)
+            1: { on: 'Power1 ON', off: 'Power1 OFF' },   // Relay 1 (Printer 1)
+            2: { on: 'Power2 ON', off: 'Power2 OFF' },   // Relay 2 (Printer 2)
+            3: { on: 'Power3 ON', off: 'Power3 OFF' },   // Relay 3 (Printer 3)
+            4: { on: 'Power4 ON', off: 'Power4 OFF' }    // Relay 4 (Printer 4 / spare)
         };
         
-        // Serial port configuration
-        this.serialPort = process.env.SONOFF_SERIAL_PORT || '/dev/serial0';
-        this.baudRate = process.env.SONOFF_BAUDRATE || '9600';
+        // Serial port configuration for FT232 with Tasmota
+        this.serialPort = process.env.SONOFF_SERIAL_PORT || '/dev/ttyUSB0';
+        this.baudRate = process.env.SONOFF_BAUDRATE || '115200';
         
         // Track relay states in memory (should sync with actual hardware on startup)
         this.relayStates = {
@@ -24,30 +24,31 @@ class SonoffService {
             4: false
         };
         
-        console.log('🔌 Sonoff Service initialized');
+        console.log('🔌 Sonoff Service initialized (Tasmota Serial)');
         console.log(`   Serial port: ${this.serialPort}`);
         console.log(`   Baud rate: ${this.baudRate}`);
     }
 
     /**
-     * Send hex command to Sonoff via serial port
-     * @param {string} hexCommand - Hex string like 'A00101A2'
+     * Send Tasmota command to Sonoff via serial port
+     * @param {string} command - Tasmota command like 'Power1 ON'
      */
-    async sendCommand(hexCommand) {
+    async sendCommand(command) {
         try {
-            // Use Python script to send command (more reliable than Node serial)
-            const pythonCommand = `python3 -c "import serial; ser = serial.Serial('${this.serialPort}', ${this.baudRate}, timeout=1); ser.write(bytes.fromhex('${hexCommand}')); ser.close()"`;
+            // Send Tasmota command via serial port with newline
+            // Using echo with Python serial for reliability
+            const pythonCommand = `python3 -c "import serial; ser = serial.Serial('${this.serialPort}', ${this.baudRate}, timeout=1); ser.write(b'${command}\\r\\n'); ser.close()"`;
             
             const { stdout, stderr } = await execPromise(pythonCommand);
             
-            if (stderr) {
+            if (stderr && !stderr.includes('Warning')) {
                 console.warn('⚠️ Sonoff command stderr:', stderr);
             }
             
-            console.log(`✅ Sent Sonoff command: ${hexCommand}`);
+            console.log(`✅ Sent Tasmota command: ${command}`);
             return { success: true };
         } catch (error) {
-            console.error('❌ Error sending Sonoff command:', error.message);
+            console.error('❌ Error sending Tasmota command:', error.message);
             throw new Error(`Failed to send command to Sonoff: ${error.message}`);
         }
     }
