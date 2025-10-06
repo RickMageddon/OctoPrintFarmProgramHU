@@ -2,26 +2,38 @@ import serial
 import time
 from datetime import datetime, timedelta
 
-# Pas aan indien je een andere poort gebruikt
-SERIAL_PORT = '/dev/serial0'
-BAUDRATE = 9600
+# Tasmota configuratie via FT232
+SERIAL_PORT = '/dev/ttyUSB0'  # FT232 adapter poort
+BAUDRATE = 115200              # Tasmota standaard baud rate
 
-# Sonoff 4CH Pro R3 commando's (voorbeeld, check je handleiding voor exacte bytes)
-RELAY_ON = ['A00101A2', 'A00201A3', 'A00301A4']   # R1, R2, R3 aan
-RELAY_OFF = ['A00100A1', 'A00200A2', 'A00300A3']  # R1, R2, R3 uit
+# Tasmota commando's voor 4CH relais
+RELAY_ON = ['Power1 ON', 'Power2 ON', 'Power3 ON', 'Power4 ON']   # R1, R2, R3, R4 aan
+RELAY_OFF = ['Power1 OFF', 'Power2 OFF', 'Power3 OFF', 'Power4 OFF']  # R1, R2, R3, R4 uit
 
-def send_command(cmd_hex):
-   # cmd_hex is een hex-string, bijvoorbeeld 'A00101A2'
-   cmd_bytes = bytes.fromhex(cmd_hex)
-   with serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1) as ser:
-      ser.write(cmd_bytes)
-      time.sleep(0.1)
+def send_command(cmd_text):
+   """
+   Stuur Tasmota commando via serial
+   cmd_text: bijvoorbeeld 'Power1 ON'
+   """
+   try:
+      with serial.Serial(SERIAL_PORT, BAUDRATE, timeout=1) as ser:
+         # Tasmota verwacht commando's met carriage return + newline
+         cmd_bytes = (cmd_text + '\r\n').encode('utf-8')
+         ser.write(cmd_bytes)
+         time.sleep(0.2)  # Kleine delay tussen commando's
+         print(f"✅ Verzonden: {cmd_text}")
+   except Exception as e:
+      print(f"❌ Fout bij verzenden commando '{cmd_text}': {e}")
 
 def all_on():
+   """Zet alle relais aan"""
+   print("🔌 Alle printers aanzetten...")
    for cmd in RELAY_ON:
       send_command(cmd)
 
 def all_off():
+   """Zet alle relais uit"""
+   print("🔌 Alle printers uitzetten...")
    for cmd in RELAY_OFF:
       send_command(cmd)
 
