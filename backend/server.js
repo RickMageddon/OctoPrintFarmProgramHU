@@ -37,7 +37,9 @@ const PORT = process.env.PORT || 3001;
 const db = new Database(process.env.DATABASE_PATH);
 const octoprintService = new OctoPrintService(db);
 const emailService = new EmailService();
-const sonoffService = new SonoffService();
+// Initialize SonoffService lazily inside startServer to avoid crashing
+// the whole backend if serial devices or permissions are not available.
+let sonoffService;
 
 // Security middleware
 app.use(helmet());
@@ -174,7 +176,8 @@ passport.deserializeUser(async (data, done) => {
 app.locals.db = db;
 app.locals.octoprintService = octoprintService;
 app.locals.emailService = emailService;
-app.locals.sonoffService = sonoffService;
+// sonoffService will be set after DB connect in startServer
+app.locals.sonoffService = null;
 app.locals.io = io;
 
 // Routes
@@ -356,6 +359,17 @@ async function startServer() {
         console.log('🔌 Connecting to database...');
         await db.connect();
         console.log('✅ Database connected successfully');
+        // Initialize SonoffService after DB is connected. If the serial port
+        // isn't available or initialization fails, log the error but continue
+        // starting the server so nginx can reach the backend for other routes.
+        try {
+            sonoffService = new SonoffService();
+            app.locals.sonoffService = sonoffService;
+            console.log('✅ SonoffService initialized');
+        } catch (sonoffInitError) {
+            console.error('⚠️ SonoffService failed to initialize:', sonoffInitError.message || sonoffInitError);
+            app.locals.sonoffService = null;
+        }
         
         // Clear print queue on startup to ensure fresh start
         console.log('🧹 Clearing print queue on startup...');
