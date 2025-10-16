@@ -106,7 +106,8 @@ app.use(passport.session());
 passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: `http://3dprinters:3001/api/auth/github/callback`
+    // Allow overriding the callback URL via environment variable for deployment flexibility
+    callbackURL: process.env.GITHUB_CALLBACK_URL || 'http://3dprinters:3001/api/auth/github/callback'
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         // Store GitHub profile info temporarily for the callback route to handle

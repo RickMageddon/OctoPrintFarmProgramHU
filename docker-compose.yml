@@ -78,6 +78,9 @@ services:
       - FRONTEND_URL=http://3dprinters:3000
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      # The OAuth callback URL GitHub should redirect to after login. Set this to the
+      # publicly reachable URL for your deployment, e.g. https://printmeister.duckdns.org/api/auth/github/callback
+      - GITHUB_CALLBACK_URL=${GITHUB_CALLBACK_URL:-http://3dprinters:3001/api/auth/github/callback}
       - SESSION_SECRET=${SESSION_SECRET}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}

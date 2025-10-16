@@ -1151,7 +1151,7 @@ router.get('/debug/github-config', (req, res) => {
         const config = {
             github_client_id: process.env.GITHUB_CLIENT_ID ? 'SET' : 'NOT SET',
             github_client_secret: process.env.GITHUB_CLIENT_SECRET ? 'SET' : 'NOT SET',
-            callback_url: `https://printmeister.duckdns.org/api/auth/github/callback`,
+            callback_url: process.env.GITHUB_CALLBACK_URL || 'http://3dprinters:3001/api/auth/github/callback',
             frontend_url: process.env.FRONTEND_URL || 'http://localhost:3000',
             session_secret: process.env.SESSION_SECRET ? 'SET' : 'NOT SET'
         };
